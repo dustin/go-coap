@@ -194,6 +194,9 @@ func (m Message) IsConfirmable() bool {
 }
 
 // Get the Path set on this message if any.
+//
+// XXX: The path is expected to be a segment at a time, not the entire
+// thing.
 func (m Message) Path() string {
 	for _, o := range m.Options {
 		if o.ID == URIPath {
@@ -204,6 +207,9 @@ func (m Message) Path() string {
 }
 
 // Update or add a LocationPath attribute on this message.
+//
+// XXX: The path is expected to be a segment at a time, not the entire
+// thing.
 func (m *Message) SetPath(s string) {
 	for _, o := range m.Options {
 		if o.ID == URIPath {
