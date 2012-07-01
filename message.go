@@ -63,7 +63,7 @@ const (
 	LocationPath  = OptionID(6)
 	URIPort       = OptionID(7)
 	LocationQuery = OptionID(8)
-	UriPath       = OptionID(9)
+	URIPath       = OptionID(9)
 	Token         = OptionID(11)
 	Accept        = OptionID(12)
 	IfMatch       = OptionID(13)
@@ -140,7 +140,7 @@ func (o Option) toBytes() []byte {
 	switch o.ID {
 	case ContentType,
 		MaxAge,
-		UriPath,
+		URIPort,
 		Accept:
 
 		var v uint32
@@ -303,28 +303,32 @@ func parseMessage(data []byte) (rv Message, err error) {
 	b := data[4:]
 	prev := 0
 	for i := 0; i < opCount && len(b) > 0; i++ {
+		oid := OptionID(prev + int(b[0]>>4))
 		l := int(b[0] & 0xf)
+		b = b[1:]
 		if l > 14 {
-			return rv, OptionTooLong
+			l += int(b[0])
+			b = b[1:]
 		}
 		if len(b) < l {
 			return rv, errors.New("Truncated")
 		}
-		oid := OptionID(prev + int(b[0]>>4))
-		var opval interface{} = b[1 : l+1]
+		var opval interface{} = b[:l]
 		switch oid {
 		case ContentType,
 			MaxAge,
-			UriPath,
+			URIPort,
 			Accept:
-			opval = decodeInt(b[1 : l+1])
+			opval = decodeInt(b[:l])
+		case ProxyURI, URIHost, LocationPath, LocationQuery, URIPath, UriQuery:
+			opval = string(b[:l])
 		}
 
 		option := Option{
 			ID:    oid,
 			Value: opval,
 		}
-		b = b[l+1:]
+		b = b[l:]
 		prev = int(option.ID)
 
 		rv.Options = append(rv.Options, option)
