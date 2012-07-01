@@ -131,10 +131,6 @@ func (m *Message) SetPath(s string) {
 	m.Options = append(m.Options, Option{LocationPath, []byte(s)})
 }
 
-func EncodeMessage(r Message) ([]byte, error) {
-	return encodeMessage(r)
-}
-
 func encodeMessage(r Message) ([]byte, error) {
 	if len(r.Options) > 14 {
 		return []byte{}, TooManyOptions
@@ -196,10 +192,6 @@ func encodeMessage(r Message) ([]byte, error) {
 	buf.Write(r.Payload)
 
 	return buf.Bytes(), nil
-}
-
-func ParseMessage(data []byte) (rv Message, err error) {
-	return parseMessage(data)
 }
 
 func parseMessage(data []byte) (rv Message, err error) {
