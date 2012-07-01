@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"sort"
 )
 
@@ -104,7 +105,62 @@ const (
 
 type Option struct {
 	ID    OptionID
-	Value []byte
+	Value interface{}
+}
+
+func encodeInt(v uint32) []byte {
+	switch {
+	case v == 0:
+		return []byte{}
+	case v < 256:
+		return []byte{byte(v)}
+	case v < 65536:
+		rv := []byte{0, 0}
+		binary.BigEndian.PutUint16(rv, uint16(v))
+		return rv
+	case v < 16777216:
+		rv := []byte{0, 0, 0, 0}
+		binary.BigEndian.PutUint32(rv, uint32(v))
+		return rv[1:]
+	default:
+		rv := []byte{0, 0, 0, 0}
+		binary.BigEndian.PutUint32(rv, uint32(v))
+		return rv
+	}
+	panic("Has to be one of those")
+}
+
+func decodeInt(b []byte) uint32 {
+	tmp := []byte{0, 0, 0, 0}
+	copy(tmp[4-len(b):], b)
+	return binary.BigEndian.Uint32(tmp)
+}
+
+func (o Option) toBytes() []byte {
+	switch o.ID {
+	case ContentType,
+		MaxAge,
+		UriPath,
+		Accept:
+
+		var v uint32
+		switch i := o.Value.(type) {
+		case int:
+			v = uint32(i)
+		case int32:
+			v = uint32(i)
+		case uint:
+			v = uint32(i)
+		case uint32:
+			v = i
+		default:
+			panic(fmt.Errorf("Invalid type for option %x", o.ID))
+		}
+		return encodeInt(v)
+	default:
+		return o.Value.([]byte)
+	}
+	panic("Has to be one of those")
 }
 
 type Options []Option
@@ -141,7 +197,7 @@ func (m Message) IsConfirmable() bool {
 func (m Message) Path() string {
 	for _, o := range m.Options {
 		if o.ID == LocationPath {
-			return string(o.Value)
+			return o.Value.(string)
 		}
 	}
 	return ""
@@ -204,15 +260,16 @@ func encodeMessage(r Message) ([]byte, error) {
 
 	prev := 0
 	for _, o := range r.Options {
-		if len(o.Value) > 15 {
+		b := o.toBytes()
+		if len(b) > 15 {
 			return []byte{}, OptionTooLong
 		}
 		if int(o.ID)-prev > 15 {
 			return []byte{}, errors.New("Gap too large")
 		}
 
-		buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(o.Value))})
-		buf.Write(o.Value)
+		buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
+		buf.Write(b)
 		prev = int(o.ID)
 	}
 
@@ -249,9 +306,19 @@ func parseMessage(data []byte) (rv Message, err error) {
 		if len(b) < l {
 			return rv, errors.New("Truncated")
 		}
+		oid := OptionID(prev + int(b[0]>>4))
+		var opval interface{} = b[1 : l+1]
+		switch oid {
+		case ContentType,
+			MaxAge,
+			UriPath,
+			Accept:
+			opval = decodeInt(b[1 : l+1])
+		}
+
 		option := Option{
-			ID:    OptionID(prev + int(b[0]>>4)),
-			Value: b[1 : l+1],
+			ID:    oid,
+			Value: opval,
 		}
 		b = b[l+1:]
 		prev = int(option.ID)
