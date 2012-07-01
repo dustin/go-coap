@@ -9,7 +9,9 @@ import (
 
 const maxPktLen = 1500
 
+// Handle CoAP messages.
 type RequestHandler interface {
+	// Handle the message and optionally return a response message.
 	Handle(l *net.UDPConn, a *net.UDPAddr, m Message) *Message
 }
 
@@ -19,6 +21,7 @@ func (f funcHandler) Handle(l *net.UDPConn, a *net.UDPAddr, m Message) *Message 
 	return f(l, a, m)
 }
 
+// Build a handler from a function.
 func FuncHandler(f func(l *net.UDPConn, a *net.UDPAddr, m Message) *Message) RequestHandler {
 	return funcHandler(f)
 }
@@ -39,6 +42,7 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 	}
 }
 
+// Transmit a message.
 func Transmit(l *net.UDPConn, a *net.UDPAddr, m Message) error {
 	d, err := encodeMessage(m)
 	if err != nil {
@@ -56,6 +60,7 @@ func Transmit(l *net.UDPConn, a *net.UDPAddr, m Message) error {
 	return err
 }
 
+// Receive a message.
 func Receive(l *net.UDPConn) (Message, error) {
 	l.SetReadDeadline(time.Now().Add(RESPONSE_TIMEOUT))
 
@@ -67,6 +72,7 @@ func Receive(l *net.UDPConn) (Message, error) {
 	return parseMessage(data[:nr])
 }
 
+// Bind to the given address and serve requests forever.
 func ListenAndServe(n, addr string, rh RequestHandler) error {
 	uaddr, err := net.ResolveUDPAddr(n, addr)
 	if err != nil {

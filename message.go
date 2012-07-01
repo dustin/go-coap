@@ -121,6 +121,7 @@ func (o Options) Swap(i, j int) {
 	o[i], o[j] = o[j], o[i]
 }
 
+// A CoAP message.
 type Message struct {
 	Type      COAPType
 	Code      uint8
@@ -131,10 +132,12 @@ type Message struct {
 	Payload []byte
 }
 
+// Return True if this message is confirmable.
 func (m Message) IsConfirmable() bool {
 	return m.Type == Confirmable
 }
 
+// Get the Path set on this message if any.
 func (m Message) Path() string {
 	for _, o := range m.Options {
 		if o.ID == LocationPath {
@@ -144,6 +147,7 @@ func (m Message) Path() string {
 	return ""
 }
 
+// Update or add a LocationPath attribute on this message.
 func (m *Message) SetPath(s string) {
 	for _, o := range m.Options {
 		if o.ID == LocationPath {

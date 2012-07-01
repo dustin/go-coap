@@ -1,4 +1,4 @@
-# CoAP for go
+# Constrained Application Protocol Client and Server for go
 
 You can read more about CoAP in [the ietf draft][coap].  I also did
 some preliminary work on `SUBSCRIBE` support from

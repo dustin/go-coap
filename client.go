@@ -11,10 +11,12 @@ const RESPONSE_RANDOM_FACTOR = 1.5
 
 const MAX_RETRANSMIT = 4
 
+// A CoAP client connection.
 type Conn struct {
 	conn *net.UDPConn
 }
 
+// Get a CoAP client.
 func Dial(n, addr string) (*Conn, error) {
 	uaddr, err := net.ResolveUDPAddr(n, addr)
 	if err != nil {
@@ -41,6 +43,7 @@ func (c *Conn) Send(req Message) (*Message, error) {
 	return &rv, nil
 }
 
+// Receive a message.
 func (c *Conn) Receive() (*Message, error) {
 	rv, err := Receive(c.conn)
 	return &rv, err
