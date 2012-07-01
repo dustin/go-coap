@@ -2,19 +2,12 @@ package coap
 
 import (
 	"fmt"
-	"net/url"
 	"reflect"
 	"testing"
 )
 
 func TestEncodeMessageSmall(t *testing.T) {
-	u, err := url.Parse("coap://localhost/")
-	if err != nil {
-		t.Fatalf("Error parsing URL: %v", err)
-	}
-
 	req := Message{
-		URL:       *u,
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,

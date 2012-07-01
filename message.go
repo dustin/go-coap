@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
-	"net/url"
 	"sort"
 )
 
@@ -100,8 +99,6 @@ func (o Options) Swap(i, j int) {
 }
 
 type Message struct {
-	URL url.URL
-
 	Type      COAPType
 	Code      COAPMethod
 	MessageID uint16
