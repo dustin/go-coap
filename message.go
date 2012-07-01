@@ -196,7 +196,7 @@ func (m Message) IsConfirmable() bool {
 // Get the Path set on this message if any.
 func (m Message) Path() string {
 	for _, o := range m.Options {
-		if o.ID == LocationPath {
+		if o.ID == URIPath {
 			return o.Value.(string)
 		}
 	}
@@ -206,7 +206,7 @@ func (m Message) Path() string {
 // Update or add a LocationPath attribute on this message.
 func (m *Message) SetPath(s string) {
 	for _, o := range m.Options {
-		if o.ID == LocationPath {
+		if o.ID == URIPath {
 			o.Value = []byte(s)
 			return
 		}
