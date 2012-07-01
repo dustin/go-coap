@@ -108,6 +108,33 @@ type Message struct {
 	Payload []byte
 }
 
+func (m Message) IsConfirmable() bool {
+	return m.Type == Confirmable
+}
+
+func (m Message) Path() string {
+	for _, o := range m.Options {
+		if o.ID == LocationPath {
+			return string(o.Value)
+		}
+	}
+	return ""
+}
+
+func (m *Message) SetPath(s string) {
+	for _, o := range m.Options {
+		if o.ID == LocationPath {
+			o.Value = []byte(s)
+			return
+		}
+	}
+	m.Options = append(m.Options, Option{LocationPath, []byte(s)})
+}
+
+func EncodeMessage(r Message) ([]byte, error) {
+	return encodeMessage(r)
+}
+
 func encodeMessage(r Message) ([]byte, error) {
 	if len(r.Options) > 14 {
 		return []byte{}, TooManyOptions
@@ -169,6 +196,10 @@ func encodeMessage(r Message) ([]byte, error) {
 	buf.Write(r.Payload)
 
 	return buf.Bytes(), nil
+}
+
+func ParseMessage(data []byte) (rv Message, err error) {
+	return parseMessage(data)
 }
 
 func parseMessage(data []byte) (rv Message, err error) {
