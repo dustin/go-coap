@@ -7,13 +7,13 @@ import (
 	"testing"
 )
 
-func TestEncodeRequestSmall(t *testing.T) {
+func TestEncodeMessageSmall(t *testing.T) {
 	u, err := url.Parse("coap://localhost/")
 	if err != nil {
 		t.Fatalf("Error parsing URL: %v", err)
 	}
 
-	req := Req{
+	req := Message{
 		URL:       *u,
 		Type:      Confirmable,
 		Code:      GET,
@@ -24,7 +24,7 @@ func TestEncodeRequestSmall(t *testing.T) {
 		},
 	}
 
-	data, err := encodeRequest(req)
+	data, err := encodeMessage(req)
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -39,18 +39,18 @@ func TestEncodeRequestSmall(t *testing.T) {
 	}
 }
 
-func TestDecodeRequestSmall(t *testing.T) {
+func TestDecodeMessageSmall(t *testing.T) {
 	data := []byte{
 		0x42, 0x1, 0x30, 0x39, 0x24, 0x0, 0x0, 0x0, 0x3,
 		0x26, 0x77, 0x65, 0x65, 0x74, 0x61, 0x67,
 	}
 
-	req, err := parseRequest(data)
+	req, err := parseMessage(data)
 	if err != nil {
 		t.Fatalf("Error parsing request: %v", err)
 	}
 
-	exp := Req{
+	exp := Message{
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,

@@ -99,7 +99,7 @@ func (o Options) Swap(i, j int) {
 	o[i], o[j] = o[j], o[i]
 }
 
-type Req struct {
+type Message struct {
 	URL url.URL
 
 	Type      COAPType
@@ -111,7 +111,7 @@ type Req struct {
 	Payload []byte
 }
 
-func encodeRequest(r Req) ([]byte, error) {
+func encodeMessage(r Message) ([]byte, error) {
 	if len(r.Options) > 14 {
 		return []byte{}, TooManyOptions
 	}
@@ -174,7 +174,7 @@ func encodeRequest(r Req) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func parseRequest(data []byte) (rv Req, err error) {
+func parseMessage(data []byte) (rv Message, err error) {
 	if len(data) < 8 {
 		return rv, errors.New("Short packet")
 	}
