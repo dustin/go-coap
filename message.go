@@ -217,7 +217,7 @@ func (m *Message) SetPath(s string) {
 			return
 		}
 	}
-	m.Options = append(m.Options, Option{LocationPath, []byte(s)})
+	m.Options = append(m.Options, Option{URIPath, []byte(s)})
 }
 
 func encodeMessage(r Message) ([]byte, error) {
