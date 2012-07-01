@@ -262,13 +262,17 @@ func encodeMessage(r Message) ([]byte, error) {
 	for _, o := range r.Options {
 		b := o.toBytes()
 		if len(b) > 15 {
-			return []byte{}, OptionTooLong
+			buf.Write([]byte{
+				byte(int(o.ID)-prev)<<4 | 15,
+				byte(len(b) - 15),
+			})
+		} else {
+			buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
 		}
 		if int(o.ID)-prev > 15 {
 			return []byte{}, errors.New("Gap too large")
 		}
 
-		buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
 		buf.Write(b)
 		prev = int(o.ID)
 	}
