@@ -4,21 +4,22 @@ package coap
 import (
 	"log"
 	"net"
+	"time"
 )
 
 const maxPktLen = 1500
 
 type RequestHandler interface {
-	Handle(a *net.UDPAddr, m Message) *Message
+	Handle(l *net.UDPConn, a *net.UDPAddr, m Message) *Message
 }
 
-type funcHandler func(a *net.UDPAddr, m Message) *Message
+type funcHandler func(l *net.UDPConn, a *net.UDPAddr, m Message) *Message
 
-func (f funcHandler) Handle(a *net.UDPAddr, m Message) *Message {
-	return f(a, m)
+func (f funcHandler) Handle(l *net.UDPConn, a *net.UDPAddr, m Message) *Message {
+	return f(l, a, m)
 }
 
-func FuncHandler(f func(a *net.UDPAddr, m Message) *Message) RequestHandler {
+func FuncHandler(f func(l *net.UDPConn, a *net.UDPAddr, m Message) *Message) RequestHandler {
 	return funcHandler(f)
 }
 
@@ -31,15 +32,39 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 		return
 	}
 
-	rv := rh.Handle(u, msg)
+	rv := rh.Handle(l, u, msg)
 	if rv != nil {
-		b, err := encodeMessage(*rv)
-		if err != nil {
-			log.Printf("Error encoding %#v", msg)
-			return
-		}
-		l.WriteTo(b, u)
+		log.Printf("Transmitting %#v", rv)
+		Transmit(l, u, *rv)
 	}
+}
+
+func Transmit(l *net.UDPConn, a *net.UDPAddr, m Message) error {
+	d, err := encodeMessage(m)
+	if err != nil {
+		return err
+	}
+
+	if a == nil {
+		_, err = l.Write(d)
+	} else {
+		_, err = l.WriteTo(d, a)
+	}
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func Receive(l *net.UDPConn) (Message, error) {
+	l.SetReadDeadline(time.Now().Add(RESPONSE_TIMEOUT))
+
+	data := make([]byte, maxPktLen)
+	nr, _, err := l.ReadFromUDP(data)
+	if err != nil {
+		return Message{}, err
+	}
+	return parseMessage(data[:nr])
 }
 
 func ListenAndServe(n, addr string, rh RequestHandler) error {

@@ -31,27 +31,17 @@ func Dial(n, addr string) (*Conn, error) {
 
 // Duration a message.  Get a response if there is one.
 func (c *Conn) Send(req Message) (*Message, error) {
-	d, err := encodeMessage(req)
-	if err != nil {
+	err := Transmit(c.conn, nil, req)
+	if err == nil {
 		return nil, err
 	}
 
-	_, err = c.conn.Write(d)
-	if err != nil {
-		return nil, err
-	}
-
-	c.conn.SetReadDeadline(time.Now().Add(RESPONSE_TIMEOUT))
-
-	data := make([]byte, maxPktLen)
-	nr, _, err := c.conn.ReadFromUDP(data)
-	if err != nil {
-		return nil, err
-	}
-	rv, err := parseMessage(data[:nr])
-	if err != nil {
-		return nil, err
-	}
+	rv, err := Receive(c.conn)
 
 	return &rv, nil
+}
+
+func (c *Conn) Receive() (*Message, error) {
+	rv, err := Receive(c.conn)
+	return &rv, err
 }
