@@ -16,13 +16,35 @@ const (
 	Reset           = COAPType(3)
 )
 
-type COAPMethod uint8
+const (
+	GET    = 1
+	POST   = 2
+	PUT    = 3
+	DELETE = 4
+)
 
 const (
-	GET    = COAPMethod(1)
-	POST   = COAPMethod(2)
-	PUT    = COAPMethod(3)
-	DELETE = COAPMethod(4)
+	Created               = 65
+	Deleted               = 66
+	Valid                 = 67
+	Changed               = 68
+	Content               = 69
+	BadRequest            = 128
+	Unauthorized          = 129
+	BadOption             = 130
+	Forbidden             = 131
+	NotFound              = 132
+	MethodNotAllowed      = 133
+	NotAcceptable         = 134
+	PreconditionFailed    = 140
+	RequestEntityTooLarge = 141
+	UnsupportedMediaType  = 143
+	InternalServerError   = 160
+	NotImplemented        = 161
+	BadGateway            = 162
+	ServiceUnavailable    = 163
+	GatewayTimeout        = 164
+	ProxyingNotSupported  = 165
 )
 
 var TooManyOptions = errors.New("Too many options")
@@ -47,7 +69,7 @@ const (
 	IfNoneMatch   = OptionID(21)
 )
 
-type MediaType uint8
+type MediaType byte
 
 const (
 	TextPlain     = MediaType(0)  // text/plain;charset=utf-8
@@ -100,7 +122,7 @@ func (o Options) Swap(i, j int) {
 
 type Message struct {
 	Type      COAPType
-	Code      COAPMethod
+	Code      uint8
 	MessageID uint16
 
 	Options Options
@@ -209,7 +231,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 		return rv, TooManyOptions
 	}
 
-	rv.Code = COAPMethod(data[1])
+	rv.Code = data[1]
 	rv.MessageID = binary.BigEndian.Uint16(data[2:4])
 
 	b := data[4:]
