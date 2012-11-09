@@ -158,6 +158,8 @@ func (o Option) toBytes() []byte {
 			panic(fmt.Errorf("Invalid type for option %x", o.ID))
 		}
 		return encodeInt(v)
+	case URIPath, UriQuery:
+		return []byte(o.Value.(string))
 	default:
 		return o.Value.([]byte)
 	}
@@ -209,7 +211,7 @@ func (m Message) Path() []string {
 	rv := []string{}
 	for _, o := range m.Options {
 		if o.ID == URIPath {
-			rv = append(rv, string(o.Value.([]byte)))
+			rv = append(rv, o.Value.(string))
 		}
 	}
 	return rv
@@ -229,7 +231,7 @@ func (m *Message) SetPathString(s string) {
 func (m *Message) SetPath(s []string) {
 	m.Options = m.Options.Minus(URIPath)
 	for _, p := range s {
-		m.Options = append(m.Options, Option{URIPath, []byte(p)})
+		m.Options = append(m.Options, Option{URIPath, p})
 	}
 }
 
@@ -302,7 +304,7 @@ func encodeMessage(r Message) ([]byte, error) {
 }
 
 func parseMessage(data []byte) (rv Message, err error) {
-	if len(data) < 8 {
+	if len(data) < 6 {
 		return rv, errors.New("Short packet")
 	}
 

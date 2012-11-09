@@ -32,6 +32,56 @@ func TestEncodeMessageSmall(t *testing.T) {
 	}
 }
 
+func TestEncodeMessageVerySmall(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+	req.SetPathString("x")
+
+	data, err := encodeMessage(req)
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	// Inspected by hand.
+	exp := []byte{
+		0x41, 0x1, 0x30, 0x39, 0x91, 0x78,
+	}
+	if !reflect.DeepEqual(exp, data) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
+	}
+}
+
+func TestEncodeSeveral(t *testing.T) {
+	tests := map[string][]string{
+		"a":   []string{"a"},
+		"axe": []string{"axe"},
+		"a/b/c/d/e/f/h/g/i/j": []string{"a", "b", "c", "d", "e",
+			"f", "h", "g", "i", "j"},
+	}
+	for p, a := range tests {
+		m := &Message{Type: Confirmable, Code: GET, MessageID: 12345}
+		m.SetPathString(p)
+		b, err := encodeMessage(*m)
+		if err != nil {
+			t.Errorf("Error encoding %#v", p)
+			t.Fail()
+			continue
+		}
+		m2, err := parseMessage(b)
+		if err != nil {
+			t.Fatalf("Can't parse my own message at %#v: %v", p, err)
+		}
+
+		if !reflect.DeepEqual(m2.Path(), a) {
+			t.Errorf("Expected %#v, got %#v", a, m2.Path())
+			t.Fail()
+		}
+	}
+}
+
 func TestEncodeLargePath(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
