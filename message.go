@@ -138,32 +138,26 @@ func decodeInt(b []byte) uint32 {
 }
 
 func (o Option) toBytes() []byte {
-	switch o.ID {
-	case ContentType,
-		MaxAge,
-		URIPort,
-		Accept:
+	var v uint32
 
-		var v uint32
-		switch i := o.Value.(type) {
-		case int:
-			v = uint32(i)
-		case int32:
-			v = uint32(i)
-		case uint:
-			v = uint32(i)
-		case uint32:
-			v = i
-		default:
-			panic(fmt.Errorf("Invalid type for option %x", o.ID))
-		}
-		return encodeInt(v)
-	case URIPath, UriQuery:
-		return []byte(o.Value.(string))
+	switch i := o.Value.(type) {
+	case string:
+		return []byte(i)
+	case []byte:
+		return i
+	case int:
+		v = uint32(i)
+	case int32:
+		v = uint32(i)
+	case uint:
+		v = uint32(i)
+	case uint32:
+		v = i
 	default:
-		return o.Value.([]byte)
+		panic(fmt.Errorf("Invalid type for option %x", o.ID))
 	}
-	panic("Has to be one of those")
+
+	return encodeInt(v)
 }
 
 type Options []Option
