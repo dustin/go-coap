@@ -173,6 +173,9 @@ func (o Options) Len() int {
 }
 
 func (o Options) Less(i, j int) bool {
+	if o[i].ID == o[j].ID {
+		return i < j
+	}
 	return o[i].ID < o[j].ID
 }
 
