@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 type COAPType uint8
@@ -177,6 +178,16 @@ func (o Options) Swap(i, j int) {
 	o[i], o[j] = o[j], o[i]
 }
 
+func (o Options) Minus(oid OptionID) Options {
+	rv := Options{}
+	for _, opt := range o {
+		if opt.ID != oid {
+			rv = append(rv, opt)
+		}
+	}
+	return rv
+}
+
 // A CoAP message.
 type Message struct {
 	Type      COAPType
@@ -194,30 +205,32 @@ func (m Message) IsConfirmable() bool {
 }
 
 // Get the Path set on this message if any.
-//
-// XXX: The path is expected to be a segment at a time, not the entire
-// thing.
-func (m Message) Path() string {
+func (m Message) Path() []string {
+	rv := []string{}
 	for _, o := range m.Options {
 		if o.ID == URIPath {
-			return o.Value.(string)
+			rv = append(rv, string(o.Value.([]byte)))
 		}
 	}
-	return ""
+	return rv
+}
+
+// Get a path as a / separated string.
+func (m Message) PathString() string {
+	return strings.Join(m.Path(), "/")
+}
+
+// Set a path by a / separated string.
+func (m *Message) SetPathString(s string) {
+	m.SetPath(strings.Split(s, "/"))
 }
 
 // Update or add a LocationPath attribute on this message.
-//
-// XXX: The path is expected to be a segment at a time, not the entire
-// thing.
-func (m *Message) SetPath(s string) {
-	for _, o := range m.Options {
-		if o.ID == URIPath {
-			o.Value = []byte(s)
-			return
-		}
+func (m *Message) SetPath(s []string) {
+	m.Options = m.Options.Minus(URIPath)
+	for _, p := range s {
+		m.Options = append(m.Options, Option{URIPath, []byte(p)})
 	}
-	m.Options = append(m.Options, Option{URIPath, []byte(s)})
 }
 
 func encodeMessage(r Message) ([]byte, error) {

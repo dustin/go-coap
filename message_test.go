@@ -38,7 +38,12 @@ func TestEncodeLargePath(t *testing.T) {
 		Code:      GET,
 		MessageID: 12345,
 	}
-	req.SetPath("this_path_is_longer_than_fifteen_bytes")
+	req.SetPathString("this_path_is_longer_than_fifteen_bytes")
+
+	if req.PathString() != "this_path_is_longer_than_fifteen_bytes" {
+		t.Fatalf("Didn't get back the same path I posted: %v",
+			req.PathString())
+	}
 
 	data, err := encodeMessage(req)
 	if err != nil {
