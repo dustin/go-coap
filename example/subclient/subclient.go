@@ -15,7 +15,7 @@ func main() {
 		Options:   coap.Options{},
 	}
 
-	req.SetPath("/some/path")
+	req.SetPathString("/some/path")
 
 	c, err := coap.Dial("udp", "localhost:5683")
 	if err != nil {

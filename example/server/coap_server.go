@@ -18,7 +18,7 @@ func main() {
 					MessageID: m.MessageID,
 					Options: coap.Options{
 						{coap.ContentType, []byte{byte(coap.TextPlain)}},
-						{coap.LocationPath, []byte(m.Path())},
+						{coap.LocationPath, m.Path()},
 					},
 					Payload: []byte("hello to you!"),
 				}
