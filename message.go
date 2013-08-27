@@ -128,7 +128,6 @@ func encodeInt(v uint32) []byte {
 		binary.BigEndian.PutUint32(rv, uint32(v))
 		return rv
 	}
-	panic("Has to be one of those")
 }
 
 func decodeInt(b []byte) uint32 {

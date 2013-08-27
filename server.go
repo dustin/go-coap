@@ -92,6 +92,4 @@ func ListenAndServe(n, addr string, rh RequestHandler) error {
 			go handlePacket(l, buf[:nr], addr, rh)
 		}
 	}
-
-	panic("Unreachable")
 }
