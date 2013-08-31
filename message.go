@@ -153,7 +153,8 @@ func (o Option) toBytes() []byte {
 	case uint32:
 		v = i
 	default:
-		panic(fmt.Errorf("Invalid type for option %x", o.ID))
+		panic(fmt.Errorf("Invalid type for option %x: %T (%v)",
+			o.ID, o.Value, o.Value))
 	}
 
 	return encodeInt(v)
