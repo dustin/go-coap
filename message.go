@@ -144,6 +144,8 @@ func (o Option) toBytes() []byte {
 		return []byte(i)
 	case []byte:
 		return i
+	case MediaType:
+		v = uint32(i)
 	case int:
 		v = uint32(i)
 	case int32:
