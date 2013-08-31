@@ -113,7 +113,7 @@ type Option struct {
 func encodeInt(v uint32) []byte {
 	switch {
 	case v == 0:
-		return []byte{}
+		return nil
 	case v < 256:
 		return []byte{byte(v)}
 	case v < 65536:
@@ -237,7 +237,7 @@ func (m *Message) SetPath(s []string) {
 
 func encodeMessage(r Message) ([]byte, error) {
 	if len(r.Options) > 14 {
-		return []byte{}, TooManyOptions
+		return nil, TooManyOptions
 	}
 
 	tmpbuf := []byte{0, 0}
@@ -291,7 +291,7 @@ func encodeMessage(r Message) ([]byte, error) {
 			buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
 		}
 		if int(o.ID)-prev > 15 {
-			return []byte{}, OptionGapTooLarge
+			return nil, OptionGapTooLarge
 		}
 
 		buf.Write(b)

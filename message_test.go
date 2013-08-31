@@ -222,7 +222,7 @@ func TestByteEncoding(t *testing.T) {
 		Value    uint32
 		Expected []byte
 	}{
-		{0, []byte{}},
+		{0, nil},
 		{13, []byte{13}},
 		{1024, []byte{4, 0}},
 		{984284, []byte{0x0f, 0x04, 0xdc}},
@@ -243,7 +243,7 @@ func TestByteDecoding(t *testing.T) {
 		Value uint32
 		Bytes []byte
 	}{
-		{0, []byte{}},
+		{0, nil},
 		{0, []byte{0}},
 		{0, []byte{0, 0}},
 		{0, []byte{0, 0, 0}},
