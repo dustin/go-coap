@@ -52,6 +52,7 @@ const (
 
 var TooManyOptions = errors.New("Too many options")
 var OptionTooLong = errors.New("Option is too long")
+var OptionGapTooLarge = errors.New("Option gap too large")
 
 type OptionID uint8
 
@@ -290,7 +291,7 @@ func encodeMessage(r Message) ([]byte, error) {
 			buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
 		}
 		if int(o.ID)-prev > 15 {
-			return []byte{}, errors.New("Gap too large")
+			return []byte{}, OptionGapTooLarge
 		}
 
 		buf.Write(b)

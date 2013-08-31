@@ -37,6 +37,23 @@ func TestEncodeMessageTooManyOptions(t *testing.T) {
 	}
 }
 
+func TestEncodeMessageLargeOptionGap(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+		Options: Options{
+			Option{ContentType, TextPlain},
+			Option{IfNoneMatch, "u"},
+		},
+	}
+
+	_, err := encodeMessage(req)
+	if err != OptionGapTooLarge {
+		t.Fatalf("Expected 'option gap too large', got: %v", err)
+	}
+}
+
 func TestEncodeMessageSmall(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
