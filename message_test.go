@@ -6,6 +6,37 @@ import (
 	"testing"
 )
 
+func TestEncodeMessageTooManyOptions(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+		Options: Options{
+			Option{ETag, []byte("weetag")},
+			Option{MaxAge, 3},
+			Option{ContentType, TextPlain},
+			Option{IfMatch, "a"},
+			Option{IfMatch, "b"},
+			Option{IfMatch, "c"},
+			Option{IfMatch, "d"},
+			Option{IfMatch, "e"},
+			Option{IfMatch, "f"},
+			Option{IfNoneMatch, "z"},
+			Option{IfNoneMatch, "y"},
+			Option{IfNoneMatch, "x"},
+			Option{IfNoneMatch, "w"},
+			Option{IfNoneMatch, "v"},
+			Option{IfNoneMatch, "u"},
+		},
+	}
+	req.SetPathString("/a/b/c/d/e/f/g/h")
+
+	_, err := encodeMessage(req)
+	if err != TooManyOptions {
+		t.Fatalf("Expected 'too many options', got: %v", err)
+	}
+}
+
 func TestEncodeMessageSmall(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
