@@ -12,7 +12,6 @@ func main() {
 		Type:      coap.NonConfirmable,
 		Code:      coap.SUBSCRIBE,
 		MessageID: 12345,
-		Options:   coap.Options{},
 	}
 
 	req.SetPathString("/some/path")

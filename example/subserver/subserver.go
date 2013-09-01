@@ -17,12 +17,11 @@ func periodicTransmitter(l *net.UDPConn, a *net.UDPAddr, m coap.Message) {
 			Type:      coap.Acknowledgement,
 			Code:      coap.Content,
 			MessageID: m.MessageID,
-			Options: coap.Options{
-				{coap.ContentType, []byte{byte(coap.TextPlain)}},
-				{coap.LocationPath, m.Path()},
-			},
-			Payload: []byte(fmt.Sprintf("Been running for %v", time.Since(subded))),
+			Payload:   []byte(fmt.Sprintf("Been running for %v", time.Since(subded))),
 		}
+
+		msg.SetOption(coap.ContentType, coap.TextPlain)
+		msg.SetOption(coap.LocationPath, m.Path())
 
 		log.Printf("Transmitting %v", msg)
 		err := coap.Transmit(l, a, msg)
