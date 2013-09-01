@@ -6,33 +6,39 @@ import (
 	"testing"
 )
 
-func TestEncodeMessageTooManyOptions(t *testing.T) {
+func TestEncodeMessageTooManyoptions(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,
-		Options: Options{
-			Option{ETag, []byte("weetag")},
-			Option{MaxAge, 3},
-			Option{ContentType, TextPlain},
-			Option{IfMatch, "a"},
-			Option{IfMatch, "b"},
-			Option{IfMatch, "c"},
-			Option{IfMatch, "d"},
-			Option{IfMatch, "e"},
-			Option{IfMatch, "f"},
-			Option{IfNoneMatch, "z"},
-			Option{IfNoneMatch, "y"},
-			Option{IfNoneMatch, "x"},
-			Option{IfNoneMatch, "w"},
-			Option{IfNoneMatch, "v"},
-			Option{IfNoneMatch, "u"},
-		},
 	}
+
+	options := []Option{
+		Option{ETag, []byte("weetag")},
+		Option{MaxAge, 3},
+		Option{ContentType, TextPlain},
+		Option{IfMatch, "a"},
+		Option{IfMatch, "b"},
+		Option{IfMatch, "c"},
+		Option{IfMatch, "d"},
+		Option{IfMatch, "e"},
+		Option{IfMatch, "f"},
+		Option{IfNoneMatch, "z"},
+		Option{IfNoneMatch, "y"},
+		Option{IfNoneMatch, "x"},
+		Option{IfNoneMatch, "w"},
+		Option{IfNoneMatch, "v"},
+		Option{IfNoneMatch, "u"},
+	}
+
+	for _, o := range options {
+		req.AddOption(o.ID, o.Value)
+	}
+
 	req.SetPathString("/a/b/c/d/e/f/g/h")
 
 	_, err := encodeMessage(req)
-	if err != TooManyOptions {
+	if err != TooManyoptions {
 		t.Fatalf("Expected 'too many options', got: %v", err)
 	}
 }
@@ -42,11 +48,10 @@ func TestEncodeMessageLargeOptionGap(t *testing.T) {
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,
-		Options: Options{
-			Option{ContentType, TextPlain},
-			Option{IfNoneMatch, "u"},
-		},
 	}
+
+	req.AddOption(ContentType, TextPlain)
+	req.AddOption(IfNoneMatch, "u")
 
 	_, err := encodeMessage(req)
 	if err != OptionGapTooLarge {
@@ -59,11 +64,10 @@ func TestEncodeMessageSmall(t *testing.T) {
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,
-		Options: Options{
-			Option{ETag, []byte("weetag")},
-			Option{MaxAge, 3},
-		},
 	}
+
+	req.AddOption(ETag, []byte("weetag"))
+	req.AddOption(MaxAge, 3)
 
 	data, err := encodeMessage(req)
 	if err != nil {
@@ -181,10 +185,9 @@ func TestDecodeLargePath(t *testing.T) {
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,
-		Options: Options{
-			{URIPath, path},
-		},
 	}
+
+	exp.SetOption(URIPath, path)
 
 	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", req) {
 		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, req)
@@ -206,11 +209,10 @@ func TestDecodeMessageSmaller(t *testing.T) {
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,
-		Options: Options{
-			Option{MaxAge, uint32(3)},
-			Option{ETag, []byte("weetag")},
-		},
 	}
+
+	exp.SetOption(MaxAge, uint32(3))
+	exp.SetOption(ETag, []byte("weetag"))
 
 	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", req) {
 		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, req)

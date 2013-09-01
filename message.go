@@ -50,7 +50,7 @@ const (
 	ProxyingNotSupported  = 165
 )
 
-var TooManyOptions = errors.New("Too many options")
+var TooManyoptions = errors.New("Too many options")
 var OptionTooLong = errors.New("Option is too long")
 var OptionGapTooLarge = errors.New("Option gap too large")
 
@@ -163,25 +163,25 @@ func (o Option) toBytes() []byte {
 	return encodeInt(v)
 }
 
-type Options []Option
+type options []Option
 
-func (o Options) Len() int {
+func (o options) Len() int {
 	return len(o)
 }
 
-func (o Options) Less(i, j int) bool {
+func (o options) Less(i, j int) bool {
 	if o[i].ID == o[j].ID {
 		return i < j
 	}
 	return o[i].ID < o[j].ID
 }
 
-func (o Options) Swap(i, j int) {
+func (o options) Swap(i, j int) {
 	o[i], o[j] = o[j], o[i]
 }
 
-func (o Options) Minus(oid OptionID) Options {
-	rv := Options{}
+func (o options) Minus(oid OptionID) options {
+	rv := options{}
 	for _, opt := range o {
 		if opt.ID != oid {
 			rv = append(rv, opt)
@@ -196,9 +196,9 @@ type Message struct {
 	Code      uint8
 	MessageID uint16
 
-	Options Options
-
 	Payload []byte
+
+	opts options
 }
 
 // Return True if this message is confirmable.
@@ -209,7 +209,7 @@ func (m Message) IsConfirmable() bool {
 // Get the Path set on this message if any.
 func (m Message) Path() []string {
 	rv := []string{}
-	for _, o := range m.Options {
+	for _, o := range m.opts {
 		if o.ID == URIPath {
 			rv = append(rv, o.Value.(string))
 		}
@@ -229,19 +229,35 @@ func (m *Message) SetPathString(s string) {
 
 // Update or add a LocationPath attribute on this message.
 func (m *Message) SetPath(s []string) {
-	m.Options = m.Options.Minus(URIPath)
+	m.RemoveOption(URIPath)
 	for _, p := range s {
-		m.Options = append(m.Options, Option{URIPath, p})
+		m.AddOption(URIPath, p)
 	}
 }
 
-func encodeMessage(r Message) ([]byte, error) {
-	if len(r.Options) > 14 {
-		return nil, TooManyOptions
+// Remove all references to an option
+func (m *Message) RemoveOption(opId OptionID) {
+	m.opts = m.opts.Minus(opId)
+}
+
+// Add an option.
+func (m *Message) AddOption(opId OptionID, val interface{}) {
+	m.opts = append(m.opts, Option{opId, val})
+}
+
+// Set an option, discarding any previous value
+func (m *Message) SetOption(opId OptionID, val interface{}) {
+	m.RemoveOption(opId)
+	m.AddOption(opId, val)
+}
+
+func encodeMessage(m Message) ([]byte, error) {
+	if len(m.opts) > 14 {
+		return nil, TooManyoptions
 	}
 
 	tmpbuf := []byte{0, 0}
-	binary.BigEndian.PutUint16(tmpbuf, r.MessageID)
+	binary.BigEndian.PutUint16(tmpbuf, m.MessageID)
 
 	/*
 	     0                   1                   2                   3
@@ -249,7 +265,7 @@ func encodeMessage(r Message) ([]byte, error) {
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	   |Ver| T |  OC   |      Code     |          Message ID           |
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |   Options (if any) ...
+	   |   options (if any) ...
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	   |   Payload (if any) ...
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -257,8 +273,8 @@ func encodeMessage(r Message) ([]byte, error) {
 
 	buf := bytes.Buffer{}
 	buf.Write([]byte{
-		(1 << 6) | (uint8(r.Type) << 4) | uint8(0xf&len(r.Options)),
-		byte(r.Code),
+		(1 << 6) | (uint8(m.Type) << 4) | uint8(0xf&len(m.opts)),
+		byte(m.Code),
 		tmpbuf[0], tmpbuf[1],
 	})
 
@@ -277,10 +293,10 @@ func encodeMessage(r Message) ([]byte, error) {
 	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
 	*/
 
-	sort.Sort(&r.Options)
+	sort.Sort(&m.opts)
 
 	prev := 0
-	for _, o := range r.Options {
+	for _, o := range m.opts {
 		b := o.toBytes()
 		if len(b) > 15 {
 			buf.Write([]byte{
@@ -298,7 +314,7 @@ func encodeMessage(r Message) ([]byte, error) {
 		prev = int(o.ID)
 	}
 
-	buf.Write(r.Payload)
+	buf.Write(m.Payload)
 
 	return buf.Bytes(), nil
 }
@@ -315,7 +331,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 	rv.Type = COAPType((data[0] >> 4) & 0x3)
 	opCount := int(data[0] & 0xf)
 	if opCount > 14 {
-		return rv, TooManyOptions
+		return rv, TooManyoptions
 	}
 
 	rv.Code = data[1]
@@ -352,7 +368,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 		b = b[l:]
 		prev = int(option.ID)
 
-		rv.Options = append(rv.Options, option)
+		rv.opts = append(rv.opts, option)
 	}
 
 	rv.Payload = b
