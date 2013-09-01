@@ -18,37 +18,82 @@ const (
 	Reset           = COAPType(3)
 )
 
+type COAPCode uint8
+
+// Request Codes
 const (
-	GET       = 1
-	POST      = 2
-	PUT       = 3
-	DELETE    = 4
-	SUBSCRIBE = 5
+	GET       COAPCode = 1
+	POST      COAPCode = 2
+	PUT       COAPCode = 3
+	DELETE    COAPCode = 4
+	SUBSCRIBE COAPCode = 5
 )
 
+// Response Codes
 const (
-	Created               = 65
-	Deleted               = 66
-	Valid                 = 67
-	Changed               = 68
-	Content               = 69
-	BadRequest            = 128
-	Unauthorized          = 129
-	BadOption             = 130
-	Forbidden             = 131
-	NotFound              = 132
-	MethodNotAllowed      = 133
-	NotAcceptable         = 134
-	PreconditionFailed    = 140
-	RequestEntityTooLarge = 141
-	UnsupportedMediaType  = 143
-	InternalServerError   = 160
-	NotImplemented        = 161
-	BadGateway            = 162
-	ServiceUnavailable    = 163
-	GatewayTimeout        = 164
-	ProxyingNotSupported  = 165
+	Created               COAPCode = 65
+	Deleted               COAPCode = 66
+	Valid                 COAPCode = 67
+	Changed               COAPCode = 68
+	Content               COAPCode = 69
+	BadRequest            COAPCode = 128
+	Unauthorized          COAPCode = 129
+	BadOption             COAPCode = 130
+	Forbidden             COAPCode = 131
+	NotFound              COAPCode = 132
+	MethodNotAllowed      COAPCode = 133
+	NotAcceptable         COAPCode = 134
+	PreconditionFailed    COAPCode = 140
+	RequestEntityTooLarge COAPCode = 141
+	UnsupportedMediaType  COAPCode = 143
+	InternalServerError   COAPCode = 160
+	NotImplemented        COAPCode = 161
+	BadGateway            COAPCode = 162
+	ServiceUnavailable    COAPCode = 163
+	GatewayTimeout        COAPCode = 164
+	ProxyingNotSupported  COAPCode = 165
 )
+
+var codeNames = [256]string{
+	GET:                   "GET",
+	POST:                  "POST",
+	PUT:                   "PUT",
+	DELETE:                "DELETE",
+	SUBSCRIBE:             "SUBSCRIBE",
+	Created:               "Created",
+	Deleted:               "Deleted",
+	Valid:                 "Valid",
+	Changed:               "Changed",
+	Content:               "Content",
+	BadRequest:            "BadRequest",
+	Unauthorized:          "Unauthorized",
+	BadOption:             "BadOption",
+	Forbidden:             "Forbidden",
+	NotFound:              "NotFound",
+	MethodNotAllowed:      "MethodNotAllowed",
+	NotAcceptable:         "NotAcceptable",
+	PreconditionFailed:    "PreconditionFailed",
+	RequestEntityTooLarge: "RequestEntityTooLarge",
+	UnsupportedMediaType:  "UnsupportedMediaType",
+	InternalServerError:   "InternalServerError",
+	NotImplemented:        "NotImplemented",
+	BadGateway:            "BadGateway",
+	ServiceUnavailable:    "ServiceUnavailable",
+	GatewayTimeout:        "GatewayTimeout",
+	ProxyingNotSupported:  "ProxyingNotSupported",
+}
+
+func init() {
+	for i := range codeNames {
+		if codeNames[i] == "" {
+			codeNames[i] = fmt.Sprintf("Unknown (0x%x)", i)
+		}
+	}
+}
+
+func (c COAPCode) String() string {
+	return codeNames[c]
+}
 
 var TooManyoptions = errors.New("Too many options")
 var OptionTooLong = errors.New("Option is too long")
@@ -193,7 +238,7 @@ func (o options) Minus(oid OptionID) options {
 // A CoAP message.
 type Message struct {
 	Type      COAPType
-	Code      uint8
+	Code      COAPCode
 	MessageID uint16
 
 	Payload []byte
@@ -334,7 +379,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 		return rv, TooManyoptions
 	}
 
-	rv.Code = data[1]
+	rv.Code = COAPCode(data[1])
 	rv.MessageID = binary.BigEndian.Uint16(data[2:4])
 
 	b := data[4:]

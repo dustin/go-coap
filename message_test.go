@@ -6,6 +6,23 @@ import (
 	"testing"
 )
 
+func TestCodeString(t *testing.T) {
+	tests := map[COAPCode]string{
+		0:             "Unknown (0x0)",
+		GET:           "GET",
+		POST:          "POST",
+		NotAcceptable: "NotAcceptable",
+		255:           "Unknown (0xff)",
+	}
+
+	for code, exp := range tests {
+		if code.String() != exp {
+			t.Errorf("Error on %d, got %v, expected %v",
+				code, code, exp)
+		}
+	}
+}
+
 func TestEncodeMessageTooManyoptions(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
