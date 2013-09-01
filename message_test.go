@@ -13,22 +13,22 @@ func TestEncodeMessageTooManyoptions(t *testing.T) {
 		MessageID: 12345,
 	}
 
-	options := []Option{
-		Option{ETag, []byte("weetag")},
-		Option{MaxAge, 3},
-		Option{ContentType, TextPlain},
-		Option{IfMatch, "a"},
-		Option{IfMatch, "b"},
-		Option{IfMatch, "c"},
-		Option{IfMatch, "d"},
-		Option{IfMatch, "e"},
-		Option{IfMatch, "f"},
-		Option{IfNoneMatch, "z"},
-		Option{IfNoneMatch, "y"},
-		Option{IfNoneMatch, "x"},
-		Option{IfNoneMatch, "w"},
-		Option{IfNoneMatch, "v"},
-		Option{IfNoneMatch, "u"},
+	options := []option{
+		option{ETag, []byte("weetag")},
+		option{MaxAge, 3},
+		option{ContentType, TextPlain},
+		option{IfMatch, "a"},
+		option{IfMatch, "b"},
+		option{IfMatch, "c"},
+		option{IfMatch, "d"},
+		option{IfMatch, "e"},
+		option{IfMatch, "f"},
+		option{IfNoneMatch, "z"},
+		option{IfNoneMatch, "y"},
+		option{IfNoneMatch, "x"},
+		option{IfNoneMatch, "w"},
+		option{IfNoneMatch, "v"},
+		option{IfNoneMatch, "u"},
 	}
 
 	for _, o := range options {

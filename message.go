@@ -105,7 +105,7 @@ const (
    +-----+---+---+----------------+--------+---------+-------------+
 */
 
-type Option struct {
+type option struct {
 	ID    OptionID
 	Value interface{}
 }
@@ -137,7 +137,7 @@ func decodeInt(b []byte) uint32 {
 	return binary.BigEndian.Uint32(tmp)
 }
 
-func (o Option) toBytes() []byte {
+func (o option) toBytes() []byte {
 	var v uint32
 
 	switch i := o.Value.(type) {
@@ -163,7 +163,7 @@ func (o Option) toBytes() []byte {
 	return encodeInt(v)
 }
 
-type options []Option
+type options []option
 
 func (o options) Len() int {
 	return len(o)
@@ -242,7 +242,7 @@ func (m *Message) RemoveOption(opId OptionID) {
 
 // Add an option.
 func (m *Message) AddOption(opId OptionID, val interface{}) {
-	m.opts = append(m.opts, Option{opId, val})
+	m.opts = append(m.opts, option{opId, val})
 }
 
 // Set an option, discarding any previous value
@@ -361,7 +361,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 			opval = string(b[:l])
 		}
 
-		option := Option{
+		option := option{
 			ID:    oid,
 			Value: opval,
 		}
