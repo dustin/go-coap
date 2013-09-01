@@ -18,6 +18,25 @@ const (
 	Reset           = COAPType(3)
 )
 
+var typeNames = [256]string{
+	Confirmable:     "Confirmable",
+	NonConfirmable:  "NonConfirmable",
+	Acknowledgement: "Acknowledgement",
+	Reset:           "Reset",
+}
+
+func init() {
+	for i := range typeNames {
+		if typeNames[i] == "" {
+			typeNames[i] = fmt.Sprintf("Unknown (0x%x)", i)
+		}
+	}
+}
+
+func (t COAPType) String() string {
+	return typeNames[t]
+}
+
 type COAPCode uint8
 
 // Request Codes

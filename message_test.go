@@ -6,6 +6,21 @@ import (
 	"testing"
 )
 
+func TestTypeString(t *testing.T) {
+	tests := map[COAPType]string{
+		Confirmable:    "Confirmable",
+		NonConfirmable: "NonConfirmable",
+		255:            "Unknown (0xff)",
+	}
+
+	for code, exp := range tests {
+		if code.String() != exp {
+			t.Errorf("Error on %d, got %v, expected %v",
+				code, code, exp)
+		}
+	}
+}
+
 func TestCodeString(t *testing.T) {
 	tests := map[COAPCode]string{
 		0:             "Unknown (0x0)",
