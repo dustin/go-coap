@@ -81,12 +81,14 @@ func ListenAndServe(n, addr string, rh RequestHandler) error {
 		return err
 	}
 
+	buf := make([]byte, maxPktLen)
 	for {
-		buf := make([]byte, maxPktLen)
 
 		nr, addr, err := l.ReadFromUDP(buf)
 		if err == nil {
-			go handlePacket(l, buf[:nr], addr, rh)
+			tmp := make([]byte, nr)
+			copy(tmp, buf)
+			go handlePacket(l, tmp, addr, rh)
 		}
 	}
 }
