@@ -283,13 +283,17 @@ func (m Message) Option(o OptionID) []interface{} {
 	return rv
 }
 
-// Get the Path set on this message if any.
-func (m Message) Path() []string {
+func (m Message) optionStrings(o OptionID) []string {
 	var rv []string
-	for _, o := range m.Option(URIPath) {
+	for _, o := range m.Option(o) {
 		rv = append(rv, o.(string))
 	}
 	return rv
+}
+
+// Get the Path set on this message if any.
+func (m Message) Path() []string {
+	return m.optionStrings(URIPath)
 }
 
 // Get a path as a / separated string.
