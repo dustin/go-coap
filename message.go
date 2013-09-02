@@ -330,7 +330,7 @@ func (m *Message) SetOption(opId OptionID, val interface{}) {
 	m.AddOption(opId, val)
 }
 
-func encodeMessage(m Message) ([]byte, error) {
+func (m *Message) encode() ([]byte, error) {
 	if len(m.opts) > 14 {
 		return nil, TooManyoptions
 	}

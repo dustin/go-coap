@@ -69,7 +69,7 @@ func TestEncodeMessageTooManyoptions(t *testing.T) {
 
 	req.SetPathString("/a/b/c/d/e/f/g/h")
 
-	_, err := encodeMessage(req)
+	_, err := req.encode()
 	if err != TooManyoptions {
 		t.Fatalf("Expected 'too many options', got: %v", err)
 	}
@@ -85,7 +85,7 @@ func TestEncodeMessageLargeOptionGap(t *testing.T) {
 	req.AddOption(ContentType, TextPlain)
 	req.AddOption(IfNoneMatch, "u")
 
-	_, err := encodeMessage(req)
+	_, err := req.encode()
 	if err != OptionGapTooLarge {
 		t.Fatalf("Expected 'option gap too large', got: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestEncodeMessageSmall(t *testing.T) {
 	req.AddOption(ETag, []byte("weetag"))
 	req.AddOption(MaxAge, 3)
 
-	data, err := encodeMessage(req)
+	data, err := req.encode()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestEncodeMessageVerySmall(t *testing.T) {
 	}
 	req.SetPathString("x")
 
-	data, err := encodeMessage(req)
+	data, err := req.encode()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestEncodeSeveral(t *testing.T) {
 	for p, a := range tests {
 		m := &Message{Type: Confirmable, Code: GET, MessageID: 12345}
 		m.SetPathString(p)
-		b, err := encodeMessage(*m)
+		b, err := (*m).encode()
 		if err != nil {
 			t.Errorf("Error encoding %#v", p)
 			t.Fail()
@@ -179,7 +179,7 @@ func TestEncodeLargePath(t *testing.T) {
 			req.PathString())
 	}
 
-	data, err := encodeMessage(req)
+	data, err := req.encode()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}

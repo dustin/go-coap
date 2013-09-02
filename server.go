@@ -44,7 +44,7 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 
 // Transmit a message.
 func Transmit(l *net.UDPConn, a *net.UDPAddr, m Message) error {
-	d, err := encodeMessage(m)
+	d, err := m.encode()
 	if err != nil {
 		return err
 	}
