@@ -270,13 +270,24 @@ func (m Message) IsConfirmable() bool {
 	return m.Type == Confirmable
 }
 
+// Get all the values for the given option.
+func (m Message) Option(o OptionID) []interface{} {
+	var rv []interface{}
+
+	for _, v := range m.opts {
+		if o == v.ID {
+			rv = append(rv, v.Value)
+		}
+	}
+
+	return rv
+}
+
 // Get the Path set on this message if any.
 func (m Message) Path() []string {
-	rv := []string{}
-	for _, o := range m.opts {
-		if o.ID == URIPath {
-			rv = append(rv, o.Value.(string))
-		}
+	var rv []string
+	for _, o := range m.Option(URIPath) {
+		rv = append(rv, o.(string))
 	}
 	return rv
 }
