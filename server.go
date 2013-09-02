@@ -54,9 +54,6 @@ func Transmit(l *net.UDPConn, a *net.UDPAddr, m Message) error {
 	} else {
 		_, err = l.WriteTo(d, a)
 	}
-	if err != nil {
-		return err
-	}
 	return err
 }
 
