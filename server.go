@@ -12,17 +12,17 @@ const maxPktLen = 1500
 // Handle CoAP messages.
 type RequestHandler interface {
 	// Handle the message and optionally return a response message.
-	Handle(l *net.UDPConn, a *net.UDPAddr, m Message) *Message
+	Handle(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message
 }
 
-type funcHandler func(l *net.UDPConn, a *net.UDPAddr, m Message) *Message
+type funcHandler func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message
 
-func (f funcHandler) Handle(l *net.UDPConn, a *net.UDPAddr, m Message) *Message {
+func (f funcHandler) Handle(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
 	return f(l, a, m)
 }
 
 // Build a handler from a function.
-func FuncHandler(f func(l *net.UDPConn, a *net.UDPAddr, m Message) *Message) RequestHandler {
+func FuncHandler(f func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message) RequestHandler {
 	return funcHandler(f)
 }
 
@@ -35,7 +35,7 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 		return
 	}
 
-	rv := rh.Handle(l, u, msg)
+	rv := rh.Handle(l, u, &msg)
 	if rv != nil {
 		log.Printf("Transmitting %#v", rv)
 		Transmit(l, u, *rv)
