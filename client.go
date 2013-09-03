@@ -14,6 +14,7 @@ const MAX_RETRANSMIT = 4
 // A CoAP client connection.
 type Conn struct {
 	conn *net.UDPConn
+	buf  []byte
 }
 
 // Get a CoAP client.
@@ -28,7 +29,7 @@ func Dial(n, addr string) (*Conn, error) {
 		return nil, err
 	}
 
-	return &Conn{s}, nil
+	return &Conn{s, make([]byte, maxPktLen)}, nil
 }
 
 // Duration a message.  Get a response if there is one.
@@ -38,13 +39,13 @@ func (c *Conn) Send(req Message) (*Message, error) {
 		return nil, err
 	}
 
-	rv, err := Receive(c.conn)
+	rv, err := Receive(c.conn, c.buf)
 
 	return &rv, nil
 }
 
 // Receive a message.
 func (c *Conn) Receive() (*Message, error) {
-	rv, err := Receive(c.conn)
+	rv, err := Receive(c.conn, c.buf)
 	return &rv, err
 }

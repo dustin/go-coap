@@ -58,15 +58,14 @@ func Transmit(l *net.UDPConn, a *net.UDPAddr, m Message) error {
 }
 
 // Receive a message.
-func Receive(l *net.UDPConn) (Message, error) {
+func Receive(l *net.UDPConn, buf []byte) (Message, error) {
 	l.SetReadDeadline(time.Now().Add(RESPONSE_TIMEOUT))
 
-	data := make([]byte, maxPktLen)
-	nr, _, err := l.ReadFromUDP(data)
+	nr, _, err := l.ReadFromUDP(buf)
 	if err != nil {
 		return Message{}, err
 	}
-	return parseMessage(data[:nr])
+	return parseMessage(buf[:nr])
 }
 
 // Bind to the given address and serve requests forever.
