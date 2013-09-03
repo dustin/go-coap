@@ -83,7 +83,6 @@ func ListenAndServe(n, addr string, rh RequestHandler) error {
 
 	buf := make([]byte, maxPktLen)
 	for {
-
 		nr, addr, err := l.ReadFromUDP(buf)
 		if err == nil {
 			tmp := make([]byte, nr)
