@@ -283,6 +283,16 @@ func (m Message) Options(o OptionID) []interface{} {
 	return rv
 }
 
+// Get the first value for the given option ID.
+func (m Message) Option(o OptionID) interface{} {
+	for _, v := range m.opts {
+		if o == v.ID {
+			return v.Value
+		}
+	}
+	return nil
+}
+
 func (m Message) optionStrings(o OptionID) []string {
 	var rv []string
 	for _, o := range m.Options(o) {
