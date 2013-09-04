@@ -271,7 +271,7 @@ func (m Message) IsConfirmable() bool {
 }
 
 // Get all the values for the given option.
-func (m Message) Option(o OptionID) []interface{} {
+func (m Message) Options(o OptionID) []interface{} {
 	var rv []interface{}
 
 	for _, v := range m.opts {
@@ -285,7 +285,7 @@ func (m Message) Option(o OptionID) []interface{} {
 
 func (m Message) optionStrings(o OptionID) []string {
 	var rv []string
-	for _, o := range m.Option(o) {
+	for _, o := range m.Options(o) {
 		rv = append(rv, o.(string))
 	}
 	return rv
