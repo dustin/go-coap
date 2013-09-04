@@ -81,7 +81,7 @@ func (mux *ServeMux) ServeCOAP(l *net.UDPConn, a *net.UDPAddr, m *Message) *Mess
 	return h.ServeCOAP(l, a, m)
 }
 
-func (mux *ServeMux) Register(pattern string, handler Handler) {
+func (mux *ServeMux) Handle(pattern string, handler Handler) {
 	if pattern == "" {
 		panic("http: invalid pattern " + pattern)
 	}
