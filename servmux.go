@@ -10,7 +10,7 @@ type ServeMux struct {
 }
 
 type muxEntry struct {
-	h       RequestHandler
+	h       Handler
 	pattern string
 }
 
@@ -48,7 +48,7 @@ func cleanPath(p string) string {
 
 // Find a handler on a handler map given a path string
 // Most-specific (longest) pattern wins
-func (mux *ServeMux) match(path string) (h RequestHandler, pattern string) {
+func (mux *ServeMux) match(path string) (h Handler, pattern string) {
 	var n = 0
 	for k, v := range mux.m {
 		if !pathMatch(k, path) {
@@ -70,18 +70,18 @@ func notFoundHandler(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
 	}
 }
 
-var _ = RequestHandler(&ServeMux{})
+var _ = Handler(&ServeMux{})
 
-func (mux *ServeMux) Handle(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
+func (mux *ServeMux) ServeCOAP(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
 	h, _ := mux.match(m.PathString())
 	if h == nil {
 		h, _ = funcHandler(notFoundHandler), ""
 	}
 	// TODO:  Rewrite path?
-	return h.Handle(l, a, m)
+	return h.ServeCOAP(l, a, m)
 }
 
-func (mux *ServeMux) Register(pattern string, handler RequestHandler) {
+func (mux *ServeMux) Register(pattern string, handler Handler) {
 	if pattern == "" {
 		panic("http: invalid pattern " + pattern)
 	}

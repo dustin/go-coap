@@ -10,24 +10,24 @@ import (
 const maxPktLen = 1500
 
 // Handle CoAP messages.
-type RequestHandler interface {
+type Handler interface {
 	// Handle the message and optionally return a response message.
-	Handle(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message
+	ServeCOAP(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message
 }
 
 type funcHandler func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message
 
-func (f funcHandler) Handle(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
+func (f funcHandler) ServeCOAP(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
 	return f(l, a, m)
 }
 
 // Build a handler from a function.
-func FuncHandler(f func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message) RequestHandler {
+func FuncHandler(f func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message) Handler {
 	return funcHandler(f)
 }
 
 func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
-	rh RequestHandler) {
+	rh Handler) {
 
 	msg, err := parseMessage(data)
 	if err != nil {
@@ -35,7 +35,7 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 		return
 	}
 
-	rv := rh.Handle(l, u, &msg)
+	rv := rh.ServeCOAP(l, u, &msg)
 	if rv != nil {
 		log.Printf("Transmitting %#v", rv)
 		Transmit(l, u, *rv)
@@ -69,7 +69,7 @@ func Receive(l *net.UDPConn, buf []byte) (Message, error) {
 }
 
 // Bind to the given address and serve requests forever.
-func ListenAndServe(n, addr string, rh RequestHandler) error {
+func ListenAndServe(n, addr string, rh Handler) error {
 	uaddr, err := net.ResolveUDPAddr(n, addr)
 	if err != nil {
 		return err
