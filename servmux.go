@@ -91,3 +91,8 @@ func (mux *ServeMux) Handle(pattern string, handler Handler) {
 
 	mux.m[pattern] = muxEntry{h: handler, pattern: pattern}
 }
+
+func (mux *ServeMux) HandleFunc(pattern string,
+	f func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message) {
+	mux.Handle(pattern, FuncHandler(f))
+}
