@@ -2,7 +2,6 @@ package coap
 
 import (
 	"net"
-	"path"
 )
 
 type ServeMux struct {
@@ -27,23 +26,6 @@ func pathMatch(pattern, path string) bool {
 		return pattern == path
 	}
 	return len(path) >= n && path[0:n] == pattern
-}
-
-// Return the canonical path for p, eliminating . and .. elements.
-func cleanPath(p string) string {
-	if p == "" {
-		return "/"
-	}
-	if p[0] != '/' {
-		p = "/" + p
-	}
-	np := path.Clean(p)
-	// path.Clean removes trailing slash except for root;
-	// put the trailing slash back if necessary.
-	if p[len(p)-1] == '/' && np != "/" {
-		np += "/"
-	}
-	return np
 }
 
 // Find a handler on a handler map given a path string
@@ -82,6 +64,10 @@ func (mux *ServeMux) ServeCOAP(l *net.UDPConn, a *net.UDPAddr, m *Message) *Mess
 }
 
 func (mux *ServeMux) Handle(pattern string, handler Handler) {
+	for pattern != "" && pattern[0] == '/' {
+		pattern = pattern[1:]
+	}
+
 	if pattern == "" {
 		panic("http: invalid pattern " + pattern)
 	}
