@@ -39,6 +39,10 @@ func (c *Conn) Send(req Message) (*Message, error) {
 		return nil, err
 	}
 
+	if !req.IsConfirmable() {
+		return nil, nil
+	}
+
 	rv, err := Receive(c.conn, c.buf)
 
 	return &rv, nil
