@@ -313,6 +313,9 @@ func (m Message) PathString() string {
 
 // Set a path by a / separated string.
 func (m *Message) SetPathString(s string) {
+	for s[0] == '/' {
+		s = s[1:]
+	}
 	m.SetPath(strings.Split(s, "/"))
 }
 
