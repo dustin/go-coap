@@ -46,10 +46,13 @@ func (mux *ServeMux) match(path string) (h Handler, pattern string) {
 }
 
 func notFoundHandler(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
-	return &Message{
-		Type: Acknowledgement,
-		Code: NotFound,
+	if m.IsConfirmable() {
+		return &Message{
+			Type: Acknowledgement,
+			Code: NotFound,
+		}
 	}
+	return nil
 }
 
 var _ = Handler(&ServeMux{})
