@@ -20,7 +20,7 @@ func periodicTransmitter(l *net.UDPConn, a *net.UDPAddr, m *coap.Message) {
 			Payload:   []byte(fmt.Sprintf("Been running for %v", time.Since(subded))),
 		}
 
-		msg.SetOption(coap.ContentType, coap.TextPlain)
+		msg.SetOption(coap.ContentFormat, coap.TextPlain)
 		msg.SetOption(coap.LocationPath, m.Path())
 
 		log.Printf("Transmitting %v", msg)

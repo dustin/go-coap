@@ -1,6 +1,7 @@
 package coap
 
 import (
+	"bytes"
 	"fmt"
 	"reflect"
 	"testing"
@@ -38,43 +39,6 @@ func TestCodeString(t *testing.T) {
 	}
 }
 
-func TestEncodeMessageTooManyoptions(t *testing.T) {
-	req := Message{
-		Type:      Confirmable,
-		Code:      GET,
-		MessageID: 12345,
-	}
-
-	options := []option{
-		option{ETag, []byte("weetag")},
-		option{MaxAge, 3},
-		option{ContentType, TextPlain},
-		option{IfMatch, "a"},
-		option{IfMatch, "b"},
-		option{IfMatch, "c"},
-		option{IfMatch, "d"},
-		option{IfMatch, "e"},
-		option{IfMatch, "f"},
-		option{IfNoneMatch, "z"},
-		option{IfNoneMatch, "y"},
-		option{IfNoneMatch, "x"},
-		option{IfNoneMatch, "w"},
-		option{IfNoneMatch, "v"},
-		option{IfNoneMatch, "u"},
-	}
-
-	for _, o := range options {
-		req.AddOption(o.ID, o.Value)
-	}
-
-	req.SetPathString("/a/b/c/d/e/f/g/h")
-
-	_, err := req.encode()
-	if err != TooManyoptions {
-		t.Fatalf("Expected 'too many options', got: %v", err)
-	}
-}
-
 func TestEncodeMessageLargeOptionGap(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
@@ -82,8 +46,8 @@ func TestEncodeMessageLargeOptionGap(t *testing.T) {
 		MessageID: 12345,
 	}
 
-	req.AddOption(ContentType, TextPlain)
-	req.AddOption(IfNoneMatch, "u")
+	req.AddOption(ContentFormat, TextPlain)
+	req.AddOption(ProxyURI, "u")
 
 	_, err := req.encode()
 	if err != OptionGapTooLarge {
@@ -108,11 +72,65 @@ func TestEncodeMessageSmall(t *testing.T) {
 
 	// Inspected by hand.
 	exp := []byte{
-		0x42, 0x1, 0x30, 0x39, 0x21, 0x3,
-		0x26, 0x77, 0x65, 0x65, 0x74, 0x61, 0x67,
+		0x40, 0x1, 0x30, 0x39, 0x46, 0x77,
+		0x65, 0x65, 0x74, 0x61, 0x67, 0xa1, 0x3,
 	}
 	if !reflect.DeepEqual(exp, data) {
 		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
+	}
+}
+
+func TestEncodeMessageSmallWithPayload(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+		Payload:   []byte("hi"),
+	}
+
+	req.AddOption(ETag, []byte("weetag"))
+	req.AddOption(MaxAge, 3)
+
+	data, err := req.encode()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	// Inspected by hand.
+	exp := []byte{
+		0x40, 0x1, 0x30, 0x39, 0x46, 0x77,
+		0x65, 0x65, 0x74, 0x61, 0x67, 0xa1, 0x3,
+		0xff, 'h', 'i',
+	}
+	if !reflect.DeepEqual(exp, data) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
+	}
+}
+
+func TestDecodeMessageSmallWithPayload(t *testing.T) {
+	input := []byte{
+		0x40, 0x1, 0x30, 0x39, 0x21, 0x3,
+		0x26, 0x77, 0x65, 0x65, 0x74, 0x61, 0x67,
+		0xff, 'h', 'i',
+	}
+
+	msg, err := parseMessage(input)
+	if err != nil {
+		t.Fatalf("Error parsing message: %v", err)
+	}
+
+	if msg.Type != Confirmable {
+		t.Errorf("Expected message type confirmable, got %v", msg.Type)
+	}
+	if msg.Code != GET {
+		t.Errorf("Expected message code GET, got %v", msg.Code)
+	}
+	if msg.MessageID != 12345 {
+		t.Errorf("Expected message ID 12345, got %v", msg.MessageID)
+	}
+
+	if !bytes.Equal(msg.Payload, []byte("hi")) {
+		t.Errorf("Incorrect payload: %q", msg.Payload)
 	}
 }
 
@@ -131,7 +149,7 @@ func TestEncodeMessageVerySmall(t *testing.T) {
 
 	// Inspected by hand.
 	exp := []byte{
-		0x41, 0x1, 0x30, 0x39, 0x91, 0x78,
+		0x40, 0x1, 0x30, 0x39, 0xb1, 0x78,
 	}
 	if !reflect.DeepEqual(exp, data) {
 		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
@@ -186,12 +204,12 @@ func TestEncodeLargePath(t *testing.T) {
 
 	// Inspected by hand.
 	exp := []byte{
-		0x41, 0x1, 0x30, 0x39, 0x9f, 0x17, 0x74, 0x68,
-		0x69, 0x73, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x5f,
-		0x69, 0x73, 0x5f, 0x6c, 0x6f, 0x6e, 0x67, 0x65,
-		0x72, 0x5f, 0x74, 0x68, 0x61, 0x6e, 0x5f, 0x66,
-		0x69, 0x66, 0x74, 0x65, 0x65, 0x6e, 0x5f, 0x62,
-		0x79, 0x74, 0x65, 0x73}
+		0x40, 0x1, 0x30, 0x39, 0xbf, 0x17, 0x74, 0x68, 0x69,
+		0x73, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x5f, 0x69, 0x73,
+		0x5f, 0x6c, 0x6f, 0x6e, 0x67, 0x65, 0x72, 0x5f, 0x74,
+		0x68, 0x61, 0x6e, 0x5f, 0x66, 0x69, 0x66, 0x74, 0x65,
+		0x65, 0x6e, 0x5f, 0x62, 0x79, 0x74, 0x65, 0x73,
+	}
 	if !reflect.DeepEqual(exp, data) {
 		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
 	}
@@ -199,12 +217,12 @@ func TestEncodeLargePath(t *testing.T) {
 
 func TestDecodeLargePath(t *testing.T) {
 	data := []byte{
-		0x41, 0x1, 0x30, 0x39, 0x9f, 0x17, 0x74, 0x68,
-		0x69, 0x73, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x5f,
-		0x69, 0x73, 0x5f, 0x6c, 0x6f, 0x6e, 0x67, 0x65,
-		0x72, 0x5f, 0x74, 0x68, 0x61, 0x6e, 0x5f, 0x66,
-		0x69, 0x66, 0x74, 0x65, 0x65, 0x6e, 0x5f, 0x62,
-		0x79, 0x74, 0x65, 0x73}
+		0x40, 0x1, 0x30, 0x39, 0xbf, 0x17, 0x74, 0x68,
+		0x69, 0x73, 0x5f, 0x70, 0x61, 0x74, 0x68, 0x5f, 0x69, 0x73,
+		0x5f, 0x6c, 0x6f, 0x6e, 0x67, 0x65, 0x72, 0x5f, 0x74, 0x68,
+		0x61, 0x6e, 0x5f, 0x66, 0x69, 0x66, 0x74, 0x65, 0x65, 0x6e,
+		0x5f, 0x62, 0x79, 0x74, 0x65, 0x73,
+	}
 
 	req, err := parseMessage(data)
 	if err != nil {
@@ -222,14 +240,15 @@ func TestDecodeLargePath(t *testing.T) {
 	exp.SetOption(URIPath, path)
 
 	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", req) {
-		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, req)
+		b, _ := exp.encode()
+		t.Fatalf("Expected\n%#v\ngot\n%#v\nfor%#v", exp, req, b)
 	}
 }
 
 func TestDecodeMessageSmaller(t *testing.T) {
 	data := []byte{
-		0x42, 0x1, 0x30, 0x39, 0x21, 0x3,
-		0x26, 0x77, 0x65, 0x65, 0x74, 0x61, 0x67,
+		0x40, 0x1, 0x30, 0x39, 0x46, 0x77,
+		0x65, 0x65, 0x74, 0x61, 0x67, 0xa1, 0x3,
 	}
 
 	req, err := parseMessage(data)
@@ -243,8 +262,8 @@ func TestDecodeMessageSmaller(t *testing.T) {
 		MessageID: 12345,
 	}
 
-	exp.SetOption(MaxAge, uint32(3))
 	exp.SetOption(ETag, []byte("weetag"))
+	exp.SetOption(MaxAge, uint32(3))
 
 	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", req) {
 		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, req)
@@ -301,5 +320,45 @@ func TestByteDecoding(t *testing.T) {
 			t.Fatalf("Expected %v, got %v for %#v",
 				v.Value, got, v.Bytes)
 		}
+	}
+}
+
+/*
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | 1 | 0 |   0   |     GET=1     |          MID=0x7d34           |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |  11   |  11   |      "temperature" (11 B) ...                 |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+func TestExample1(t *testing.T) {
+	input := append([]byte{0x40, 1, 0x7d, 0x34,
+		(11 << 4) | 11}, []byte("temperature")...)
+
+	msg, err := parseMessage(input)
+	if err != nil {
+		t.Fatalf("Error parsing message: %v", err)
+	}
+
+	if msg.Type != Confirmable {
+		t.Errorf("Expected message type confirmable, got %v", msg.Type)
+	}
+	if msg.Code != GET {
+		t.Errorf("Expected message code GET, got %v", msg.Code)
+	}
+	if msg.MessageID != 0x7d34 {
+		t.Errorf("Expected message ID 0x7d34, got 0x%x", msg.MessageID)
+	}
+
+	if msg.Option(URIPath).(string) != "temperature" {
+		t.Errorf("Incorrect uri path: %q", msg.Option(URIPath))
+	}
+
+	if len(msg.Token) > 0 {
+		t.Errorf("Incorrect token: %x", msg.Token)
+	}
+	if len(msg.Payload) > 0 {
+		t.Errorf("Incorrect payload: %q", msg.Payload)
 	}
 }

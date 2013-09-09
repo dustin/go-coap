@@ -114,27 +114,52 @@ func (c COAPCode) String() string {
 	return codeNames[c]
 }
 
-var TooManyoptions = errors.New("Too many options")
+var InvalidTokenLen = errors.New("Invalid token length")
 var OptionTooLong = errors.New("Option is too long")
 var OptionGapTooLarge = errors.New("Option gap too large")
 
 type OptionID uint8
 
+/*
+   +-----+----+---+---+---+----------------+--------+--------+---------+
+   | No. | C  | U | N | R | Name           | Format | Length | Default |
+   +-----+----+---+---+---+----------------+--------+--------+---------+
+   |   1 | x  |   |   | x | If-Match       | opaque | 0-8    | (none)  |
+   |   3 | x  | x | - |   | Uri-Host       | string | 1-255  | (see    |
+   |     |    |   |   |   |                |        |        | below)  |
+   |   4 |    |   |   | x | ETag           | opaque | 1-8    | (none)  |
+   |   5 | x  |   |   |   | If-None-Match  | empty  | 0      | (none)  |
+   |   7 | x  | x | - |   | Uri-Port       | uint   | 0-2    | (see    |
+   |     |    |   |   |   |                |        |        | below)  |
+   |   8 |    |   |   | x | Location-Path  | string | 0-255  | (none)  |
+   |  11 | x  | x | - | x | Uri-Path       | string | 0-255  | (none)  |
+   |  12 |    |   |   |   | Content-Format | uint   | 0-2    | (none)  |
+   |  14 |    | x | - |   | Max-Age        | uint   | 0-4    | 60      |
+   |  15 | x  | x | - | x | Uri-Query      | string | 0-255  | (none)  |
+   |  17 | x  |   |   |   | Accept         | uint   | 0-2    | (none)  |
+   |  20 |    |   |   | x | Location-Query | string | 0-255  | (none)  |
+   |  35 | x  | x | - |   | Proxy-Uri      | string | 1-1034 | (none)  |
+   |  39 | x  | x | - |   | Proxy-Scheme   | string | 1-255  | (none)  |
+   |  60 |    |   | x |   | Size1          | uint   | 0-4    | (none)  |
+   +-----+----+---+---+---+----------------+--------+--------+---------+
+*/
+
 const (
-	ContentType   = OptionID(1)
-	MaxAge        = OptionID(2)
-	ProxyURI      = OptionID(3)
+	IfMatch       = OptionID(1)
+	URIHost       = OptionID(3)
 	ETag          = OptionID(4)
-	URIHost       = OptionID(5)
-	LocationPath  = OptionID(6)
+	IfNoneMatch   = OptionID(5)
 	URIPort       = OptionID(7)
-	LocationQuery = OptionID(8)
-	URIPath       = OptionID(9)
-	Token         = OptionID(11)
-	Accept        = OptionID(12)
-	IfMatch       = OptionID(13)
-	UriQuery      = OptionID(15)
-	IfNoneMatch   = OptionID(21)
+	LocationPath  = OptionID(8)
+	URIPath       = OptionID(11)
+	ContentFormat = OptionID(12)
+	MaxAge        = OptionID(14)
+	URIQuery      = OptionID(15)
+	Accept        = OptionID(17)
+	LocationQuery = OptionID(20)
+	ProxyURI      = OptionID(35)
+	ProxyScheme   = OptionID(39)
+	Size1         = OptionID(60)
 )
 
 type MediaType byte
@@ -147,27 +172,6 @@ const (
 	AppExi        = MediaType(47) // application/exi
 	AppJSON       = MediaType(50) // application/json
 )
-
-/*
-   +-----+---+---+----------------+--------+---------+-------------+
-   | No. | C | R | Name           | Format | Length  | Default     |
-   +-----+---+---+----------------+--------+---------+-------------+
-   |   1 | x |   | Content-Type   | uint   | 0-2 B   | (none)      |
-   |   2 |   |   | Max-Age        | uint   | 0-4 B   | 60          |
-   |   3 | x | x | Proxy-Uri      | string | 1-270 B | (none)      |
-   |   4 |   | x | ETag           | opaque | 1-8 B   | (none)      |
-   |   5 | x |   | Uri-Host       | string | 1-270 B | (see below) |
-   |   6 |   | x | Location-Path  | string | 0-270 B | (none)      |
-   |   7 | x |   | Uri-Port       | uint   | 0-2 B   | (see below) |
-   |   8 |   | x | Location-Query | string | 0-270 B | (none)      |
-   |   9 | x | x | Uri-Path       | string | 0-270 B | (none)      |
-   |  11 | x |   | Token          | opaque | 1-8 B   | (empty)     |
-   |  12 |   | x | Accept         | uint   | 0-2 B   | (none)      |
-   |  13 | x | x | If-Match       | opaque | 0-8 B   | (none)      |
-   |  15 | x | x | Uri-Query      | string | 0-270 B | (none)      |
-   |  21 | x |   | If-None-Match  | empty  | 0 B     | (none)      |
-   +-----+---+---+----------------+--------+---------+-------------+
-*/
 
 type option struct {
 	ID    OptionID
@@ -260,7 +264,7 @@ type Message struct {
 	Code      COAPCode
 	MessageID uint16
 
-	Payload []byte
+	Token, Payload []byte
 
 	opts options
 }
@@ -344,10 +348,6 @@ func (m *Message) SetOption(opId OptionID, val interface{}) {
 }
 
 func (m *Message) encode() ([]byte, error) {
-	if len(m.opts) > 14 {
-		return nil, TooManyoptions
-	}
-
 	tmpbuf := []byte{0, 0}
 	binary.BigEndian.PutUint16(tmpbuf, m.MessageID)
 
@@ -355,20 +355,23 @@ func (m *Message) encode() ([]byte, error) {
 	     0                   1                   2                   3
 	    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |Ver| T |  OC   |      Code     |          Message ID           |
+	   |Ver| T |  TKL  |      Code     |          Message ID           |
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |   options (if any) ...
+	   |   Token (if any, TKL bytes) ...
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |   Payload (if any) ...
+	   |   Options (if any) ...
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |1 1 1 1 1 1 1 1|    Payload (if any) ...
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	*/
 
 	buf := bytes.Buffer{}
 	buf.Write([]byte{
-		(1 << 6) | (uint8(m.Type) << 4) | uint8(0xf&len(m.opts)),
+		(1 << 6) | (uint8(m.Type) << 4) | uint8(0xf&len(m.Token)),
 		byte(m.Code),
 		tmpbuf[0], tmpbuf[1],
 	})
+	buf.Write(m.Token)
 
 	/*
 	     0   1   2   3   4   5   6   7
@@ -406,6 +409,10 @@ func (m *Message) encode() ([]byte, error) {
 		prev = int(o.ID)
 	}
 
+	if len(m.Payload) > 0 {
+		buf.Write([]byte{0xff})
+	}
+
 	buf.Write(m.Payload)
 
 	return buf.Bytes(), nil
@@ -421,9 +428,9 @@ func parseMessage(data []byte) (rv Message, err error) {
 	}
 
 	rv.Type = COAPType((data[0] >> 4) & 0x3)
-	opCount := int(data[0] & 0xf)
-	if opCount > 14 {
-		return rv, TooManyoptions
+	tokenLen := int(data[0] & 0xf)
+	if tokenLen > 8 {
+		return rv, InvalidTokenLen
 	}
 
 	rv.Code = COAPCode(data[1])
@@ -431,7 +438,11 @@ func parseMessage(data []byte) (rv Message, err error) {
 
 	b := data[4:]
 	prev := 0
-	for i := 0; i < opCount && len(b) > 0; i++ {
+	for len(b) > 0 {
+		if b[0] == 0xff {
+			b = b[1:]
+			break
+		}
 		oid := OptionID(prev + int(b[0]>>4))
 		l := int(b[0] & 0xf)
 		b = b[1:]
@@ -444,12 +455,10 @@ func parseMessage(data []byte) (rv Message, err error) {
 		}
 		var opval interface{} = b[:l]
 		switch oid {
-		case ContentType,
-			MaxAge,
-			URIPort,
-			Accept:
+		case URIPort, ContentFormat, MaxAge, Accept, Size1:
 			opval = decodeInt(b[:l])
-		case ProxyURI, URIHost, LocationPath, LocationQuery, URIPath, UriQuery:
+		case URIHost, LocationPath, URIPath, URIQuery, LocationQuery,
+			ProxyURI, ProxyScheme:
 			opval = string(b[:l])
 		}
 
