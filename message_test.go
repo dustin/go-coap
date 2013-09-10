@@ -362,3 +362,39 @@ func TestExample1(t *testing.T) {
 		t.Errorf("Incorrect payload: %q", msg.Payload)
 	}
 }
+
+/*
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   | 1 | 2 |   0   |    2.05=69    |          MID=0x7d34           |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |1 1 1 1 1 1 1 1|      "22.3 C" (6 B) ...
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*/
+func TestExample1Res(t *testing.T) {
+	input := append([]byte{0x60, 69, 0x7d, 0x34, 0xff},
+		[]byte("22.3 C")...)
+
+	msg, err := parseMessage(input)
+	if err != nil {
+		t.Fatalf("Error parsing message: %v", err)
+	}
+
+	if msg.Type != Acknowledgement {
+		t.Errorf("Expected message type confirmable, got %v", msg.Type)
+	}
+	if msg.Code != Content {
+		t.Errorf("Expected message code Content, got %v", msg.Code)
+	}
+	if msg.MessageID != 0x7d34 {
+		t.Errorf("Expected message ID 0x7d34, got 0x%x", msg.MessageID)
+	}
+
+	if len(msg.Token) > 0 {
+		t.Errorf("Incorrect token: %x", msg.Token)
+	}
+	if !bytes.Equal(msg.Payload, []byte("22.3 C")) {
+		t.Errorf("Incorrect payload: %q", msg.Payload)
+	}
+}
