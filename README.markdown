@@ -5,4 +5,4 @@ some preliminary work on `SUBSCRIBE` support from
 [an early draft][shelby].
 
 [shelby]: http://tools.ietf.org/html/draft-shelby-core-coap-01
-[coap]: http://tools.ietf.org/html/draft-ietf-core-coap-10
+[coap]: http://tools.ietf.org/html/draft-ietf-core-coap-18

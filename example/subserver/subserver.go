@@ -9,7 +9,7 @@ import (
 	"github.com/dustin/go-coap"
 )
 
-func periodicTransmitter(l *net.UDPConn, a *net.UDPAddr, m coap.Message) {
+func periodicTransmitter(l *net.UDPConn, a *net.UDPAddr, m *coap.Message) {
 	subded := time.Now()
 
 	for {
@@ -17,12 +17,11 @@ func periodicTransmitter(l *net.UDPConn, a *net.UDPAddr, m coap.Message) {
 			Type:      coap.Acknowledgement,
 			Code:      coap.Content,
 			MessageID: m.MessageID,
-			Options: coap.Options{
-				{coap.ContentType, []byte{byte(coap.TextPlain)}},
-				{coap.LocationPath, m.Path()},
-			},
-			Payload: []byte(fmt.Sprintf("Been running for %v", time.Since(subded))),
+			Payload:   []byte(fmt.Sprintf("Been running for %v", time.Since(subded))),
 		}
+
+		msg.SetOption(coap.ContentFormat, coap.TextPlain)
+		msg.SetOption(coap.LocationPath, m.Path())
 
 		log.Printf("Transmitting %v", msg)
 		err := coap.Transmit(l, a, msg)
@@ -37,7 +36,7 @@ func periodicTransmitter(l *net.UDPConn, a *net.UDPAddr, m coap.Message) {
 
 func main() {
 	log.Fatal(coap.ListenAndServe("udp", ":5683",
-		coap.FuncHandler(func(l *net.UDPConn, a *net.UDPAddr, m coap.Message) *coap.Message {
+		coap.FuncHandler(func(l *net.UDPConn, a *net.UDPAddr, m *coap.Message) *coap.Message {
 			log.Printf("Got message path=%q: %#v from %v", m.Path(), m, a)
 			if m.Code == coap.SUBSCRIBE {
 				go periodicTransmitter(l, a, m)

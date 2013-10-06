@@ -12,13 +12,11 @@ func main() {
 		Type:      coap.Confirmable,
 		Code:      coap.GET,
 		MessageID: 12345,
-		Options: coap.Options{
-			{coap.ETag, []byte("weetag")},
-			{coap.MaxAge, []byte{0, 0, 0, 3}},
-		},
-		Payload: []byte("hello, world!"),
+		Payload:   []byte("hello, world!"),
 	}
 
+	req.SetOption(coap.ETag, "weetag")
+	req.SetOption(coap.MaxAge, 3)
 	req.SetPathString("/some/path")
 
 	c, err := coap.Dial("udp", "localhost:5683")
