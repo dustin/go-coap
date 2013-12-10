@@ -365,13 +365,20 @@ func (m *Message) encode() ([]byte, error) {
 	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	*/
 
+    tknlen := uint8(len(m.Token))
+    if (tknlen > 8) {
+        tknlen = 8
+    }
+
 	buf := bytes.Buffer{}
 	buf.Write([]byte{
-		(1 << 6) | (uint8(m.Type) << 4) | uint8(0xf&len(m.Token)),
+		(1 << 6) | (uint8(m.Type) << 4) | tknlen),
 		byte(m.Code),
 		tmpbuf[0], tmpbuf[1],
 	})
-	buf.Write(m.Token)
+
+    
+	buf.Write(m.Token[:tknlen])
 
 	/*
 	     0   1   2   3   4   5   6   7
@@ -393,18 +400,36 @@ func (m *Message) encode() ([]byte, error) {
 	prev := 0
 	for _, o := range m.opts {
 		b := o.toBytes()
-		if len(b) > 15 {
-			buf.Write([]byte{
-				byte(int(o.ID)-prev)<<4 | 15,
-				byte(len(b) - 15),
-			})
-		} else {
-			buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
-		}
-		if int(o.ID)-prev > 15 {
-			return nil, OptionGapTooLarge
-		}
+        optdelta := o.ID - prev
+		optlen := len(b)
 
+        var optlenbytes byte[]
+        if optlen >= 269 {
+            optlenbytes = encodeInt(optlen - 269);
+            optlen = 14;
+        } else if optlen >= 13 {
+            optlenbytes = encodeInt(optlen - 13);
+            optlen = 13;
+        } else {
+            optlenbytes = nil;
+        }
+        
+        var optdeltabytes byte[]
+        if optlen >= 269 {
+            optdeltabytes = encodeInt(optdelta - 269);
+            optdelta = 14;
+        } else if optlen >= 13 {
+            optdeltabytes = encodeInt(optdelta - 13);
+            optdelta = 13;
+        } else {
+            optdeltabytes = nil;
+        }
+
+        optdeltalenbyte := byte((optdelta << 4) + optlen);
+
+        buf.Write(byte[](optdeltalenbyte))
+        buf.Write(optdeltabytes)
+        buf.Write(optlenbytes)
 		buf.Write(b)
 		prev = int(o.ID)
 	}
@@ -428,7 +453,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 	}
 
 	rv.Type = COAPType((data[0] >> 4) & 0x3)
-	tokenLen := int(data[0] & 0xf)
+	tokenLen := uint8(data[0] & 0xf)
 	if tokenLen > 8 {
 		return rv, InvalidTokenLen
 	}
@@ -437,37 +462,62 @@ func parseMessage(data []byte) (rv Message, err error) {
 	rv.MessageID = binary.BigEndian.Uint16(data[2:4])
 
 	b := data[4:]
+    
+    // Token
+    rv.Token = b[:tokenLen]
+    b = b[tokenLen:]
+
+    // Options
 	prev := 0
 	for len(b) > 0 {
-		if b[0] == 0xff {
-			b = b[1:]
-			break
-		}
-		oid := OptionID(prev + int(b[0]>>4))
-		l := int(b[0] & 0xf)
-		b = b[1:]
-		if l > 14 {
-			l += int(b[0])
-			b = b[1:]
-		}
-		if len(b) < l {
-			return rv, errors.New("Truncated")
-		}
-		var opval interface{} = b[:l]
+        optlen := (b[0] >> 4)
+        optdelta := b[0] & 0xf
+        b = b[1:]
+
+        if (optlen == 15) || (optdelta == 15) {
+            if (optlen == 15) && (optdelta == 15) {
+                break;
+            }
+            else return rv, errors.New("Invalid Option: Len xor Delta was 15")
+        }
+
+        if optdelta == 14 {
+            optdelta = decodeInt(b[:2]) - 269;
+            b = b[2:]
+        } else if optdelta == 13 {
+            optdelta = decodeInt(b[:1]) - 13;
+            b = b[1:]
+        }
+
+        if optlen == 14 {
+            optlen = decodeInt(b[:2]) - 269;
+            b = b[2:]
+        } else if optlen == 13 {
+            optlen = decodeInt(b[:1]) - 13;
+            b = b[1:]
+        }
+
+        if len(b) < optlen {
+            return rv, errors.New("Truncated option")
+        }
+        
+        var opval interface{} = b[:optlen]
+
+		oid := OptionID(prev + optdelta))
 		switch oid {
 		case URIPort, ContentFormat, MaxAge, Accept, Size1:
-			opval = decodeInt(b[:l])
+			opval = decodeInt(b[:optlen])
 		case URIHost, LocationPath, URIPath, URIQuery, LocationQuery,
 			ProxyURI, ProxyScheme:
-			opval = string(b[:l])
+			opval = string(b[:optlen])
 		}
 
 		option := option{
 			ID:    oid,
 			Value: opval,
 		}
-		b = b[l:]
-		prev = int(option.ID)
+		b = b[optlen:]
+		prev = int(oid)
 
 		rv.opts = append(rv.opts, option)
 	}
