@@ -453,7 +453,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 	}
 
 	rv.Type = COAPType((data[0] >> 4) & 0x3)
-	tokenLen := int(data[0] & 0xf)
+	tokenLen := uint8(data[0] & 0xf)
 	if tokenLen > 8 {
 		return rv, InvalidTokenLen
 	}
@@ -467,38 +467,57 @@ func parseMessage(data []byte) (rv Message, err error) {
     rv.Token = b[:tokenLen]
     b = b[tokenLen:]
 
-
+    // Options
 	prev := 0
 	for len(b) > 0 {
-		if b[0] == 0xff {
-			b = b[1:]
-			break
-		}
-		oid := OptionID(prev + int(b[0]>>4))
-		l := int(b[0] & 0xf)
-		b = b[1:]
-		if l > 14 {
-			l += int(b[0])
-			b = b[1:]
-		}
-		if len(b) < l {
-			return rv, errors.New("Truncated")
-		}
-		var opval interface{} = b[:l]
+        optlen := (b[0] >> 4)
+        optdelta := b[0] & 0xf
+        b = b[1:]
+
+        if (optlen == 15) || (optdelta == 15) {
+            if (optlen == 15) && (optdelta == 15) {
+                break;
+            }
+            else return rv, errors.New("Invalid Option: Len xor Delta was 15")
+        }
+
+        if optdelta == 14 {
+            optdelta = decodeInt(b[:2]) - 269;
+            b = b[2:]
+        } else if optdelta == 13 {
+            optdelta = decodeInt(b[:1]) - 13;
+            b = b[1:]
+        }
+
+        if optlen == 14 {
+            optlen = decodeInt(b[:2]) - 269;
+            b = b[2:]
+        } else if optlen == 13 {
+            optlen = decodeInt(b[:1]) - 13;
+            b = b[1:]
+        }
+
+        if len(b) < optlen {
+            return rv, errors.New("Truncated option")
+        }
+        
+        var opval interface{} = b[:optlen]
+
+		oid := OptionID(prev + optdelta))
 		switch oid {
 		case URIPort, ContentFormat, MaxAge, Accept, Size1:
-			opval = decodeInt(b[:l])
+			opval = decodeInt(b[:optlen])
 		case URIHost, LocationPath, URIPath, URIQuery, LocationQuery,
 			ProxyURI, ProxyScheme:
-			opval = string(b[:l])
+			opval = string(b[:optlen])
 		}
 
 		option := option{
 			ID:    oid,
 			Value: opval,
 		}
-		b = b[l:]
-		prev = int(option.ID)
+		b = b[optlen:]
+		prev = int(oid)
 
 		rv.opts = append(rv.opts, option)
 	}
