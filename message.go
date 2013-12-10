@@ -400,18 +400,36 @@ func (m *Message) encode() ([]byte, error) {
 	prev := 0
 	for _, o := range m.opts {
 		b := o.toBytes()
-		if len(b) > 15 {
-			buf.Write([]byte{
-				byte(int(o.ID)-prev)<<4 | 15,
-				byte(len(b) - 15),
-			})
-		} else {
-			buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
-		}
-		if int(o.ID)-prev > 15 {
-			return nil, OptionGapTooLarge
-		}
+        optdelta := o.ID - prev
+		optlen := len(b)
 
+        var optlenbytes byte[]
+        if optlen >= 269 {
+            optlenbytes = encodeInt(optlen - 269);
+            optlen = 14;
+        } else if optlen >= 13 {
+            optlenbytes = encodeInt(optlen - 13);
+            optlen = 13;
+        } else {
+            optlenbytes = nil;
+        }
+        
+        var optdeltabytes byte[]
+        if optlen >= 269 {
+            optdeltabytes = encodeInt(optdelta - 269);
+            optdelta = 14;
+        } else if optlen >= 13 {
+            optdeltabytes = encodeInt(optdelta - 13);
+            optdelta = 13;
+        } else {
+            optdeltabytes = nil;
+        }
+
+        optdeltalenbyte := byte((optdelta << 4) + optlen);
+
+        buf.Write(byte[](optdeltalenbyte))
+        buf.Write(optdeltabytes)
+        buf.Write(optlenbytes)
 		buf.Write(b)
 		prev = int(o.ID)
 	}
