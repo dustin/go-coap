@@ -50,7 +50,7 @@ func TestEncodeMessageLargeOptionGap(t *testing.T) {
 	req.AddOption(ProxyURI, "u")
 
 	_, err := req.encode()
-	if err != OptionGapTooLarge {
+	if err != ErrOptionGapTooLarge {
 		t.Fatalf("Expected 'option gap too large', got: %v", err)
 	}
 }

@@ -5,19 +5,24 @@ import (
 	"time"
 )
 
-const RESPONSE_TIMEOUT = time.Second * 2
+const (
+	// ResponseTimeout is the amount of time to wait for a
+	// response.
+	ResponseTimeout = time.Second * 2
+	// ResponseRandomFactor is a multiplier for response backoff.
+	ResponseRandomFactor = 1.5
+	// MaxRetransmit is the maximum number of times a message will
+	// be retransmitted.
+	MaxRetransmit = 4
+)
 
-const RESPONSE_RANDOM_FACTOR = 1.5
-
-const MAX_RETRANSMIT = 4
-
-// A CoAP client connection.
+// Conn is a CoAP client connection.
 type Conn struct {
 	conn *net.UDPConn
 	buf  []byte
 }
 
-// Get a CoAP client.
+// Dial connects a CoAP client.
 func Dial(n, addr string) (*Conn, error) {
 	uaddr, err := net.ResolveUDPAddr(n, addr)
 	if err != nil {
@@ -32,7 +37,7 @@ func Dial(n, addr string) (*Conn, error) {
 	return &Conn{s, make([]byte, maxPktLen)}, nil
 }
 
-// Duration a message.  Get a response if there is one.
+// Send a message.  Get a response if there is one.
 func (c *Conn) Send(req Message) (*Message, error) {
 	err := Transmit(c.conn, nil, req)
 	if err == nil {

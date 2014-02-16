@@ -9,6 +9,7 @@ import (
 	"strings"
 )
 
+// COAPType represents the message type.
 type COAPType uint8
 
 const (
@@ -37,6 +38,7 @@ func (t COAPType) String() string {
 	return typeNames[t]
 }
 
+// COAPCode is the type used for both request and response codes.
 type COAPCode uint8
 
 // Request Codes
@@ -114,10 +116,11 @@ func (c COAPCode) String() string {
 	return codeNames[c]
 }
 
-var InvalidTokenLen = errors.New("Invalid token length")
-var OptionTooLong = errors.New("Option is too long")
-var OptionGapTooLarge = errors.New("Option gap too large")
+var ErrInvalidTokenLen = errors.New("invalid token length")
+var ErrOptionTooLong = errors.New("option is too long")
+var ErrOptionGapTooLarge = errors.New("option gap too large")
 
+// OptionID identifies an option in a message.
 type OptionID uint8
 
 /*
@@ -162,6 +165,7 @@ const (
 	Size1         = OptionID(60)
 )
 
+// MediaType specifies the content type of a message.
 type MediaType byte
 
 const (
@@ -224,7 +228,7 @@ func (o option) toBytes() []byte {
 	case uint32:
 		v = i
 	default:
-		panic(fmt.Errorf("Invalid type for option %x: %T (%v)",
+		panic(fmt.Errorf("invalid type for option %x: %T (%v)",
 			o.ID, o.Value, o.Value))
 	}
 
@@ -258,7 +262,7 @@ func (o options) Minus(oid OptionID) options {
 	return rv
 }
 
-// A CoAP message.
+// Message is a CoAP message.
 type Message struct {
 	Type      COAPType
 	Code      COAPCode
@@ -269,12 +273,12 @@ type Message struct {
 	opts options
 }
 
-// Return True if this message is confirmable.
+// IsConfirmable returns true if this message is confirmable.
 func (m Message) IsConfirmable() bool {
 	return m.Type == Confirmable
 }
 
-// Get all the values for the given option.
+// Options gets all the values for the given option.
 func (m Message) Options(o OptionID) []interface{} {
 	var rv []interface{}
 
@@ -287,7 +291,7 @@ func (m Message) Options(o OptionID) []interface{} {
 	return rv
 }
 
-// Get the first value for the given option ID.
+// Option gets the first value for the given option ID.
 func (m Message) Option(o OptionID) interface{} {
 	for _, v := range m.opts {
 		if o == v.ID {
@@ -305,17 +309,17 @@ func (m Message) optionStrings(o OptionID) []string {
 	return rv
 }
 
-// Get the Path set on this message if any.
+// Path gets the Path set on this message if any.
 func (m Message) Path() []string {
 	return m.optionStrings(URIPath)
 }
 
-// Get a path as a / separated string.
+// PathString gets a path as a / separated string.
 func (m Message) PathString() string {
 	return strings.Join(m.Path(), "/")
 }
 
-// Set a path by a / separated string.
+// SetPathString sets a path by a / separated string.
 func (m *Message) SetPathString(s string) {
 	for s[0] == '/' {
 		s = s[1:]
@@ -323,7 +327,7 @@ func (m *Message) SetPathString(s string) {
 	m.SetPath(strings.Split(s, "/"))
 }
 
-// Update or add a LocationPath attribute on this message.
+// SetPath updates or adds a LocationPath attribute on this message.
 func (m *Message) SetPath(s []string) {
 	m.RemoveOption(URIPath)
 	for _, p := range s {
@@ -331,20 +335,20 @@ func (m *Message) SetPath(s []string) {
 	}
 }
 
-// Remove all references to an option
-func (m *Message) RemoveOption(opId OptionID) {
-	m.opts = m.opts.Minus(opId)
+// RemoveOption removes all references to an option
+func (m *Message) RemoveOption(opID OptionID) {
+	m.opts = m.opts.Minus(opID)
 }
 
-// Add an option.
-func (m *Message) AddOption(opId OptionID, val interface{}) {
-	m.opts = append(m.opts, option{opId, val})
+// AddOption adds an option.
+func (m *Message) AddOption(opID OptionID, val interface{}) {
+	m.opts = append(m.opts, option{opID, val})
 }
 
-// Set an option, discarding any previous value
-func (m *Message) SetOption(opId OptionID, val interface{}) {
-	m.RemoveOption(opId)
-	m.AddOption(opId, val)
+// SetOption sets an option, discarding any previous value
+func (m *Message) SetOption(opID OptionID, val interface{}) {
+	m.RemoveOption(opID)
+	m.AddOption(opID, val)
 }
 
 func (m *Message) encode() ([]byte, error) {
@@ -402,7 +406,7 @@ func (m *Message) encode() ([]byte, error) {
 			buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
 		}
 		if int(o.ID)-prev > 15 {
-			return nil, OptionGapTooLarge
+			return nil, ErrOptionGapTooLarge
 		}
 
 		buf.Write(b)
@@ -420,17 +424,17 @@ func (m *Message) encode() ([]byte, error) {
 
 func parseMessage(data []byte) (rv Message, err error) {
 	if len(data) < 6 {
-		return rv, errors.New("Short packet")
+		return rv, errors.New("short packet")
 	}
 
 	if data[0]>>6 != 1 {
-		return rv, errors.New("Invalid version")
+		return rv, errors.New("invalid version")
 	}
 
 	rv.Type = COAPType((data[0] >> 4) & 0x3)
 	tokenLen := int(data[0] & 0xf)
 	if tokenLen > 8 {
-		return rv, InvalidTokenLen
+		return rv, ErrInvalidTokenLen
 	}
 
 	rv.Code = COAPCode(data[1])
@@ -451,7 +455,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 			b = b[1:]
 		}
 		if len(b) < l {
-			return rv, errors.New("Truncated")
+			return rv, errors.New("truncated")
 		}
 		var opval interface{} = b[:l]
 		switch oid {
