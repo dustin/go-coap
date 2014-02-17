@@ -13,10 +13,15 @@ import (
 type COAPType uint8
 
 const (
-	Confirmable     = COAPType(0)
-	NonConfirmable  = COAPType(1)
+	// Confirmable messages require acknowledgements.
+	Confirmable = COAPType(0)
+	// NonConfirmable messages do not require acknowledgements.
+	NonConfirmable = COAPType(1)
+	// Acknowledgement is a message type indicating a response to
+	// a confirmable message.
 	Acknowledgement = COAPType(2)
-	Reset           = COAPType(3)
+	// Reset indicates a permanent negative acknowledgement.
+	Reset = COAPType(3)
 )
 
 var typeNames = [256]string{
@@ -116,9 +121,12 @@ func (c COAPCode) String() string {
 	return codeNames[c]
 }
 
-var ErrInvalidTokenLen = errors.New("invalid token length")
-var ErrOptionTooLong = errors.New("option is too long")
-var ErrOptionGapTooLarge = errors.New("option gap too large")
+// Message encoding errors.
+var (
+	ErrInvalidTokenLen   = errors.New("invalid token length")
+	ErrOptionTooLong     = errors.New("option is too long")
+	ErrOptionGapTooLarge = errors.New("option gap too large")
+)
 
 // OptionID identifies an option in a message.
 type OptionID uint8
@@ -147,6 +155,7 @@ type OptionID uint8
    +-----+----+---+---+---+----------------+--------+--------+---------+
 */
 
+// Option IDs.
 const (
 	IfMatch       = OptionID(1)
 	URIHost       = OptionID(3)
@@ -168,6 +177,7 @@ const (
 // MediaType specifies the content type of a message.
 type MediaType byte
 
+// Content types.
 const (
 	TextPlain     = MediaType(0)  // text/plain;charset=utf-8
 	AppLinkFormat = MediaType(40) // application/link-format
