@@ -14,6 +14,8 @@ const (
 	// MaxRetransmit is the maximum number of times a message will
 	// be retransmitted.
 	MaxRetransmit = 4
+    // Print debug messages
+    Verbose = true
 )
 
 // Conn is a CoAP client connection.
