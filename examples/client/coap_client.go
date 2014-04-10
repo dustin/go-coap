@@ -17,7 +17,7 @@ func main() {
 
 	req.SetOption(coap.ETag, "weetag")
 	req.SetOption(coap.MaxAge, 3)
-	req.SetPathString("/some/path")
+	req.SetPathString("/hello")
 
 	c, err := coap.Dial("udp", "localhost:5683")
 	if err != nil {

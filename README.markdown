@@ -2,7 +2,8 @@
 
 You can read more about CoAP in [the ietf draft][coap].  I also did
 some preliminary work on `SUBSCRIBE` support from
-[an early draft][shelby].
+[an early draft][shelby] and on `Observing Resources` support from [the ietf draft][observe].
 
 [shelby]: http://tools.ietf.org/html/draft-shelby-core-coap-01
 [coap]: http://tools.ietf.org/html/draft-ietf-core-coap-18
+[observe]: http://tools.ietf.org/html/draft-ietf-core-observe-12

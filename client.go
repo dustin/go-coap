@@ -14,6 +14,8 @@ const (
 	// MaxRetransmit is the maximum number of times a message will
 	// be retransmitted.
 	MaxRetransmit = 4
+    // Print debug messages
+    Verbose = true
 )
 
 // Conn is a CoAP client connection.
@@ -48,7 +50,7 @@ func (c *Conn) Send(req Message) (*Message, error) {
 		return nil, nil
 	}
 
-	rv, err := Receive(c.conn, c.buf)
+	rv, err := ReceiveTimeout(c.conn, ResponseTimeout, c.buf)
 
 	return &rv, nil
 }

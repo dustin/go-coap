@@ -9,12 +9,13 @@ import (
 func main() {
 
 	req := coap.Message{
-		Type:      coap.NonConfirmable,
-		Code:      coap.SUBSCRIBE,
-		MessageID: 12345,
+		Type:      coap.Confirmable,
+		Code:      coap.GET,
+		MessageID: 0,
 	}
 
-	req.SetPathString("/some/path")
+	req.SetOption(coap.Observe, 0)
+	req.SetPathString("/time")
 
 	c, err := coap.Dial("udp", "localhost:5683")
 	if err != nil {
@@ -31,10 +32,18 @@ func main() {
 			if err != nil {
 				log.Fatalf("Error receiving: %v", err)
 			}
-			log.Printf("Got %s", rv.Payload)
+			if string(rv.Payload) != "" {
+				log.Printf("Got %s", rv.Payload)
+			}
+
+			req = coap.Message{
+				Type:      coap.Acknowledgement,
+				Code:      0,
+				MessageID: rv.MessageID,
+			}
+			c.Send(req)
 		}
 		rv, err = c.Receive()
-
 	}
 	log.Printf("Done...\n")
 
