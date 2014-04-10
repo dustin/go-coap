@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 // COAPType represents the message type.
@@ -34,7 +35,7 @@ var typeNames = [256]string{
 func init() {
 	for i := range typeNames {
 		if typeNames[i] == "" {
-			typeNames[i] = fmt.Sprintf("Unknown (0x%x)", i)
+			typeNames[i] = fmt.Sprintf("unknown (0x%x)", i)
 		}
 	}
 }
@@ -46,12 +47,16 @@ func (t COAPType) String() string {
 // COAPCode is the type used for both request and response codes.
 type COAPCode uint8
 
+// For RFC1982 (Serial Arithmetic) calculations in 32 bits.
+const year68 = 1 << 31
+
 // Request Codes
 const (
-	GET       COAPCode = 1
-	POST      COAPCode = 2
-	PUT       COAPCode = 3
-	DELETE    COAPCode = 4
+	GET    COAPCode = 1
+	POST   COAPCode = 2
+	PUT    COAPCode = 3
+	DELETE COAPCode = 4
+	// deprecated
 	SUBSCRIBE COAPCode = 5
 )
 
@@ -112,7 +117,7 @@ var codeNames = [256]string{
 func init() {
 	for i := range codeNames {
 		if codeNames[i] == "" {
-			codeNames[i] = fmt.Sprintf("Unknown (0x%x)", i)
+			codeNames[i] = fmt.Sprintf("unknown (0x%x)", i)
 		}
 	}
 }
@@ -128,9 +133,6 @@ var (
 	ErrOptionGapTooLarge = errors.New("option gap too large")
 )
 
-// OptionID identifies an option in a message.
-type OptionID uint8
-
 /*
    +-----+----+---+---+---+----------------+--------+--------+---------+
    | No. | C  | U | N | R | Name           | Format | Length | Default |
@@ -140,6 +142,8 @@ type OptionID uint8
    |     |    |   |   |   |                |        |        | below)  |
    |   4 |    |   |   | x | ETag           | opaque | 1-8    | (none)  |
    |   5 | x  |   |   |   | If-None-Match  | empty  | 0      | (none)  |
+   |   6 |    | x | - |   | Observe        | empty/ | 0/0-3  | (none)  |
+   |     |    |   |   |   |                | uint   |        |         |
    |   7 | x  | x | - |   | Uri-Port       | uint   | 0-2    | (see    |
    |     |    |   |   |   |                |        |        | below)  |
    |   8 |    |   |   | x | Location-Path  | string | 0-255  | (none)  |
@@ -156,11 +160,14 @@ type OptionID uint8
 */
 
 // Option IDs.
+type OptionID uint8
+
 const (
 	IfMatch       = OptionID(1)
 	URIHost       = OptionID(3)
 	ETag          = OptionID(4)
 	IfNoneMatch   = OptionID(5)
+	Observe       = OptionID(6)
 	URIPort       = OptionID(7)
 	LocationPath  = OptionID(8)
 	URIPath       = OptionID(11)
@@ -227,6 +234,8 @@ func (o option) toBytes() []byte {
 		return []byte(i)
 	case []byte:
 		return i
+	case []string:
+		return []byte(strings.Join(i, ""))
 	case MediaType:
 		v = uint32(i)
 	case int:
@@ -238,8 +247,8 @@ func (o option) toBytes() []byte {
 	case uint32:
 		v = i
 	default:
-		panic(fmt.Errorf("invalid type for option %x: %T (%v)",
-			o.ID, o.Value, o.Value))
+		debugMsg("invalid type for option %x: %T (%v)",
+			o.ID, o.Value, o.Value)
 	}
 
 	return encodeInt(v)
@@ -283,12 +292,47 @@ type Message struct {
 	opts options
 }
 
+// TimeToString translates the RRSIG's incep. and expir. times to the
+// string representation used when printing the record.
+// It takes serial arithmetic (RFC 1982) into observe option.
+func TimeToString(t uint32) string {
+	mod := ((int64(t) - time.Now().Unix()) / year68) - 1
+	if mod < 0 {
+		mod = 0
+	}
+	ti := time.Unix(int64(t)-(mod*year68), 0).UTC()
+	return ti.Format("20060102150405")
+}
+
+// StringToTime translates the RRSIG's incep. and expir. times from
+// string values like "20110403154150" to an 32 bit integer.
+// It takes serial arithmetic (RFC 1982) into observe option.
+func StringToTime(s string) (uint32, error) {
+	t, e := time.Parse("20060102150405", s)
+	if e != nil {
+		return 0, e
+	}
+	mod := (t.Unix() / year68) - 1
+	if mod < 0 {
+		mod = 0
+	}
+	return uint32(t.Unix() - (mod * year68)), nil
+}
+
 // IsConfirmable returns true if this message is confirmable.
 func (m Message) IsConfirmable() bool {
 	return m.Type == Confirmable
 }
 
-// Options gets all the values for the given option.
+// IsObserver returns true if this message is for observe.
+func (m Message) IsObserver() bool {
+	for _, o := range m.opts {
+		return o.ID == Observe
+	}
+	return false
+}
+
+// Get all the values for the given option.
 func (m Message) Options(o OptionID) []interface{} {
 	var rv []interface{}
 
@@ -346,19 +390,19 @@ func (m *Message) SetPath(s []string) {
 }
 
 // RemoveOption removes all references to an option
-func (m *Message) RemoveOption(opID OptionID) {
-	m.opts = m.opts.Minus(opID)
+func (m *Message) RemoveOption(opId OptionID) {
+	m.opts = m.opts.Minus(opId)
 }
 
 // AddOption adds an option.
-func (m *Message) AddOption(opID OptionID, val interface{}) {
-	m.opts = append(m.opts, option{opID, val})
+func (m *Message) AddOption(opId OptionID, val interface{}) {
+	m.opts = append(m.opts, option{opId, val})
 }
 
 // SetOption sets an option, discarding any previous value
-func (m *Message) SetOption(opID OptionID, val interface{}) {
-	m.RemoveOption(opID)
-	m.AddOption(opID, val)
+func (m *Message) SetOption(opId OptionID, val interface{}) {
+	m.RemoveOption(opId)
+	m.AddOption(opId, val)
 }
 
 func (m *Message) encode() ([]byte, error) {
@@ -389,36 +433,56 @@ func (m *Message) encode() ([]byte, error) {
 
 	/*
 	     0   1   2   3   4   5   6   7
-	   +---+---+---+---+---+---+---+---+
-	   | Option Delta  |    Length     | for 0..14
-	   +---+---+---+---+---+---+---+---+
-	   |   Option Value ...
-	   +---+---+---+---+---+---+---+---+
-	                                               for 15..270:
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	   | Option Delta  | 1   1   1   1 |          Length - 15          |
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	   |   Option Value ...
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	*/
+	   +---------------+---------------+
+	   |               |               |
+	   |  Option Delta | Option Length |   1 byte
+	   |               |               |
+	   +---------------+---------------+
+	   \                               \
+	   /         Option Delta          /   0-2 bytes
+	   \          (extended)           \
+	   +-------------------------------+
+	   \                               \
+	   /         Option Length         /   0-2 bytes
+	   \          (extended)           \
+	   +-------------------------------+
+	   \                               \
+	   /                               /
+	   \                               \
+	   /         Option Value          /   0 or more bytes
+	   \                               \
+	   /                               /
+	   \                               \
+	   +-------------------------------+
 
+	  http://tools.ietf.org/html/draft-ietf-core-coap-18#section-3.1
+	*/
 	sort.Sort(&m.opts)
 
 	prev := 0
 	for _, o := range m.opts {
 		b := o.toBytes()
-		if len(b) > 15 {
-			buf.Write([]byte{
-				byte(int(o.ID)-prev)<<4 | 15,
-				byte(len(b) - 15),
-			})
-		} else {
-			buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
+
+		optDelta := int(o.ID) - prev
+		delta := optionNibble(optDelta)
+		l := optionNibble(len(b))
+		buf.Write([]byte{0xFF & (byte(delta)<<4 | byte(l))})
+		if delta == 13 {
+			buf.Write([]byte{byte(optDelta - 13)})
+		} else if delta == 14 {
+			buf.Write([]byte{byte(uint8(optDelta-269) >> 8)})
+			buf.Write([]byte{byte(0xFF & (optDelta - 269))})
 		}
-		if int(o.ID)-prev > 15 {
-			return nil, ErrOptionGapTooLarge
+		if l == 13 {
+			buf.Write([]byte{byte(len(b) - 13)})
+		} else if l == 14 {
+			buf.Write([]byte{byte(uint8(len(b)) >> 8)})
+			buf.Write([]byte{byte(0xFF & (len(b) - 269))})
 		}
 
+		if optDelta > 15 {
+			return nil, ErrOptionGapTooLarge
+		}
 		buf.Write(b)
 		prev = int(o.ID)
 	}
@@ -427,18 +491,30 @@ func (m *Message) encode() ([]byte, error) {
 		buf.Write([]byte{0xff})
 	}
 
-	buf.Write(m.Payload)
+	buf.Write(bytes.Trim(m.Payload, " \x00"))
 
 	return buf.Bytes(), nil
 }
 
+func optionNibble(value int) int {
+	if value < 13 {
+		return (0xFF & value)
+	} else if value <= 0xFF+13 {
+		return 13
+	} else if value <= 0xFFFF+269 {
+		return 14
+	} else {
+		panic("nibble value larger that 526345 is not supported")
+	}
+}
+
 func parseMessage(data []byte) (rv Message, err error) {
-	if len(data) < 6 {
-		return rv, errors.New("short packet")
+	if len(data) < 4 {
+		return rv, errors.New("Short packet")
 	}
 
 	if data[0]>>6 != 1 {
-		return rv, errors.New("invalid version")
+		return rv, errors.New("Invalid version")
 	}
 
 	rv.Type = COAPType((data[0] >> 4) & 0x3)
@@ -452,6 +528,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 
 	b := data[4:]
 	prev := 0
+
 	for len(b) > 0 {
 		if b[0] == 0xff {
 			b = b[1:]
@@ -460,12 +537,17 @@ func parseMessage(data []byte) (rv Message, err error) {
 		oid := OptionID(prev + int(b[0]>>4))
 		l := int(b[0] & 0xf)
 		b = b[1:]
-		if l > 14 {
+		if l == 13 {
 			l += int(b[0])
 			b = b[1:]
 		}
+		if l == 14 {
+			l = len(b[2:]) & 0xFFFF
+			b = b[2:]
+		}
+
 		if len(b) < l {
-			return rv, errors.New("truncated")
+			return rv, errors.New("Truncated")
 		}
 		var opval interface{} = b[:l]
 		switch oid {
@@ -486,6 +568,6 @@ func parseMessage(data []byte) (rv Message, err error) {
 		rv.opts = append(rv.opts, option)
 	}
 
-	rv.Payload = b
+	rv.Payload = bytes.Trim(b, " \x00")
 	return rv, nil
 }

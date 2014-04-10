@@ -1,9 +1,5 @@
 package coap
 
-import (
-	"net"
-)
-
 // ServeMux provides mappings from a common endpoint to handlers by
 // request path.
 type ServeMux struct {
@@ -14,6 +10,8 @@ type muxEntry struct {
 	h       Handler
 	pattern string
 }
+
+var DefaultServeMux = NewServeMux()
 
 // NewServeMux creates a new ServeMux.
 func NewServeMux() *ServeMux { return &ServeMux{m: make(map[string]muxEntry)} }
@@ -48,27 +46,11 @@ func (mux *ServeMux) match(path string) (h Handler, pattern string) {
 	return
 }
 
-func notFoundHandler(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
-	if m.IsConfirmable() {
-		return &Message{
-			Type: Acknowledgement,
-			Code: NotFound,
-		}
-	}
-	return nil
-}
-
-var _ = Handler(&ServeMux{})
-
 // ServeCOAP handles a single COAP message.  The message arrives from
 // the given listener having originated from the given UDPAddr.
-func (mux *ServeMux) ServeCOAP(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
+func (mux *ServeMux) ServeCOAP(r *RemoteAddr, m *Message) *Message {
 	h, _ := mux.match(m.PathString())
-	if h == nil {
-		h, _ = funcHandler(notFoundHandler), ""
-	}
-	// TODO:  Rewrite path?
-	return h.ServeCOAP(l, a, m)
+	return h.ServeCOAP(r, m)
 }
 
 // Handle configures a handler for the given path.
@@ -78,17 +60,22 @@ func (mux *ServeMux) Handle(pattern string, handler Handler) {
 	}
 
 	if pattern == "" {
-		panic("http: invalid pattern " + pattern)
+		panic("coap: invalid pattern " + pattern)
 	}
+
 	if handler == nil {
-		panic("http: nil handler")
+		panic("coap: nil handler")
+	}
+
+	if handler == nil {
+		debugMsg("coap: nil handler")
+		return
 	}
 
 	mux.m[pattern] = muxEntry{h: handler, pattern: pattern}
 }
 
 // HandleFunc configures a handler for the given path.
-func (mux *ServeMux) HandleFunc(pattern string,
-	f func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message) {
-	mux.Handle(pattern, FuncHandler(f))
+func (mux *ServeMux) HandleFunc(pattern string, handler func(r *RemoteAddr, m *Message) *Message) {
+	mux.Handle(pattern, HandlerFunc(handler))
 }

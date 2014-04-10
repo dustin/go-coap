@@ -48,7 +48,7 @@ func (c *Conn) Send(req Message) (*Message, error) {
 		return nil, nil
 	}
 
-	rv, err := Receive(c.conn, c.buf)
+	rv, err := ReceiveTimeout(c.conn, ResponseTimeout, c.buf)
 
 	return &rv, nil
 }
