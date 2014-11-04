@@ -40,7 +40,7 @@ func Dial(n, addr string) (*Conn, error) {
 // Send a message.  Get a response if there is one.
 func (c *Conn) Send(req Message) (*Message, error) {
 	err := Transmit(c.conn, nil, req)
-	if err == nil {
+	if err != nil {
 		return nil, err
 	}
 
