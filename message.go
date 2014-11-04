@@ -407,7 +407,7 @@ func (m *Message) encode() ([]byte, error) {
 	prev := 0
 	for _, o := range m.opts {
 		b := o.toBytes()
-		if len(b) > 15 {
+		if len(b) >= 15 {
 			buf.Write([]byte{
 				byte(int(o.ID)-prev)<<4 | 15,
 				byte(len(b) - 15),

@@ -184,6 +184,54 @@ func TestEncodeSeveral(t *testing.T) {
 	}
 }
 
+func TestEncodePath14(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+	req.SetPathString("123456789ABCDE")
+
+	data, err := req.encode()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	// Inspected by hand.
+	exp := []byte{
+		0x40, 0x1, 0x30, 0x39, 0xbe,
+		'1', '2', '3', '4', '5', '6', '7', '8',
+		'9', 'A', 'B', 'C', 'D', 'E',
+	}
+	if !reflect.DeepEqual(exp, data) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
+	}
+}
+
+func TestEncodePath15(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+	req.SetPathString("123456789ABCDEF")
+
+	data, err := req.encode()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	// Inspected by hand.
+	exp := []byte{
+		0x40, 0x1, 0x30, 0x39, 0xbf, 0x00,
+		'1', '2', '3', '4', '5', '6', '7', '8',
+		'9', 'A', 'B', 'C', 'D', 'E', 'F',
+	}
+	if !reflect.DeepEqual(exp, data) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
+	}
+}
+
 func TestEncodeLargePath(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
