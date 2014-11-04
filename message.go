@@ -486,6 +486,8 @@ func parseMessage(data []byte) (rv Message, err error) {
 		rv.opts = append(rv.opts, option)
 	}
 
-	rv.Payload = b
+	if len(b) > 0 {
+		rv.Payload = b
+	}
 	return rv, nil
 }
