@@ -235,13 +235,14 @@ func TestDecodeLargePath(t *testing.T) {
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,
+		Payload:   []byte{},
 	}
 
 	exp.SetOption(URIPath, path)
 
 	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", req) {
 		b, _ := exp.encode()
-		t.Fatalf("Expected\n%#v\ngot\n%#v\nfor%#v", exp, req, b)
+		t.Fatalf("Expected\n%#v\ngot\n%#v\nfor %#v", exp, req, b)
 	}
 }
 
@@ -260,6 +261,7 @@ func TestDecodeMessageSmaller(t *testing.T) {
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,
+		Payload:   []byte{},
 	}
 
 	exp.SetOption(ETag, []byte("weetag"))
