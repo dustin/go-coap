@@ -7,6 +7,45 @@ import (
 	"testing"
 )
 
+func TestOptionToBytes(t *testing.T) {
+	tests := []struct {
+		in  interface{}
+		exp []byte
+	}{
+		{"", []byte{}},
+		{[]byte{}, []byte{}},
+		{"x", []byte{'x'}},
+		{[]byte{'x'}, []byte{'x'}},
+		{MediaType(3), []byte{0x3}},
+		{3, []byte{0x3}},
+		{838, []byte{0x3, 0x46}},
+		{int32(838), []byte{0x3, 0x46}},
+		{uint(838), []byte{0x3, 0x46}},
+		{uint32(838), []byte{0x3, 0x46}},
+	}
+
+	for _, test := range tests {
+		op := option{Value: test.in}
+		got := op.toBytes()
+		if !bytes.Equal(test.exp, got) {
+			t.Errorf("Error on %T(%v), got %#v, wanted %#v",
+				test.in, test.in, got, test.exp)
+		}
+	}
+}
+
+func TestOptionToBytesPanic(t *testing.T) {
+	defer func() {
+		err := recover()
+		if err == nil {
+			t.Error("Expected panic. Didn't")
+		} else {
+			t.Logf("Got expected error: %v", err)
+		}
+	}()
+	option{Value: 3.1415926535897}.toBytes()
+}
+
 func TestTypeString(t *testing.T) {
 	tests := map[COAPType]string{
 		Confirmable:    "Confirmable",
