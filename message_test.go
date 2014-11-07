@@ -219,6 +219,29 @@ func TestEncodeMessageVerySmall(t *testing.T) {
 	}
 }
 
+// Same as above, but with a leading slash
+func TestEncodeMessageVerySmall2(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+	req.SetPathString("/x")
+
+	data, err := req.encode()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	// Inspected by hand.
+	exp := []byte{
+		0x40, 0x1, 0x30, 0x39, 0xb1, 0x78,
+	}
+	if !reflect.DeepEqual(exp, data) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
+	}
+}
+
 func TestEncodeSeveral(t *testing.T) {
 	tests := map[string][]string{
 		"a":   []string{"a"},
