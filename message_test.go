@@ -51,6 +51,13 @@ func TestMessageConfirmable(t *testing.T) {
 	}
 }
 
+func TestMissingOption(t *testing.T) {
+	got := Message{}.Option(MaxAge)
+	if got != nil {
+		t.Errorf("Expected nil, got %v", got)
+	}
+}
+
 func TestOptionToBytesPanic(t *testing.T) {
 	defer func() {
 		err := recover()
