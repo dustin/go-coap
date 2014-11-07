@@ -34,6 +34,23 @@ func TestOptionToBytes(t *testing.T) {
 	}
 }
 
+func TestMessageConfirmable(t *testing.T) {
+	tests := []struct {
+		m   Message
+		exp bool
+	}{
+		{Message{Type: Confirmable}, true},
+		{Message{Type: NonConfirmable}, false},
+	}
+
+	for _, test := range tests {
+		got := test.m.IsConfirmable()
+		if got != test.exp {
+			t.Errorf("Expected %v for %v", test.exp, test.m)
+		}
+	}
+}
+
 func TestOptionToBytesPanic(t *testing.T) {
 	defer func() {
 		err := recover()
