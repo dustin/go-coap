@@ -170,6 +170,23 @@ func TestEncodeMessageSmallWithPayload(t *testing.T) {
 	}
 }
 
+func TestInvalidMessageParsing(t *testing.T) {
+	msg, err := parseMessage(nil)
+	if err == nil {
+		t.Errorf("Unexpected success parsing short message: %v", msg)
+	}
+
+	msg, err = parseMessage([]byte{0xff, 0, 0, 0, 0, 0})
+	if err == nil {
+		t.Errorf("Unexpected success parsing invalid message: %v", msg)
+	}
+
+	msg, err = parseMessage([]byte{0x4f, 0, 0, 0, 0, 0})
+	if err == nil {
+		t.Errorf("Unexpected success parsing invalid message: %v", msg)
+	}
+}
+
 func TestDecodeMessageSmallWithPayload(t *testing.T) {
 	input := []byte{
 		0x40, 0x1, 0x30, 0x39, 0x21, 0x3,
