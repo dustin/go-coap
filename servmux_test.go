@@ -39,3 +39,24 @@ func TestPathMatching(t *testing.T) {
 		t.Errorf("Expected 1 message for /b, got %v", msgs["b"])
 	}
 }
+
+func TestPathMatch(t *testing.T) {
+	tests := []struct {
+		pattern, path string
+		exp           bool
+	}{
+		{"", "", false},
+		{"/a/b/c", "/a/b/c", true},
+		{"/a/b/c", "/a/b/c/d", false},
+		{"/a/b/c/", "/a/b/c/d", true},
+		{"/a/b/c", "/", false},
+		{"/a/", "/", false},
+	}
+
+	for _, test := range tests {
+		if pathMatch(test.pattern, test.path) != test.exp {
+			t.Errorf("Failed on pathMatch(%q, %q), wanted %v",
+				test.pattern, test.path, test.exp)
+		}
+	}
+}
