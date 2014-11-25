@@ -19,7 +19,7 @@ func main() {
 					Payload:   []byte("hello to you!"),
 				}
 				res.SetOption(coap.ContentFormat, coap.TextPlain)
-				res.SetOption(coap.LocationPath, m.Path())
+				res.SetPath(m.Path())
 
 				return res
 			}
