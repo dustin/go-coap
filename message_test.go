@@ -2,9 +2,15 @@ package coap
 
 import (
 	"bytes"
+	"encoding"
 	"fmt"
 	"reflect"
 	"testing"
+)
+
+var (
+	_ = encoding.BinaryMarshaler(&Message{})
+	_ = encoding.BinaryUnmarshaler(&Message{})
 )
 
 func TestOptionToBytes(t *testing.T) {
@@ -112,7 +118,7 @@ func TestEncodeMessageLargeOptionGap(t *testing.T) {
 	req.AddOption(ContentFormat, TextPlain)
 	req.AddOption(ProxyURI, "u")
 
-	_, err := req.encode()
+	_, err := req.MarshalBinary()
 	if err != ErrOptionGapTooLarge {
 		t.Fatalf("Expected 'option gap too large', got: %v", err)
 	}
@@ -128,7 +134,7 @@ func TestEncodeMessageSmall(t *testing.T) {
 	req.AddOption(ETag, []byte("weetag"))
 	req.AddOption(MaxAge, 3)
 
-	data, err := req.encode()
+	data, err := req.MarshalBinary()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -154,7 +160,7 @@ func TestEncodeMessageSmallWithPayload(t *testing.T) {
 	req.AddOption(ETag, []byte("weetag"))
 	req.AddOption(MaxAge, 3)
 
-	data, err := req.encode()
+	data, err := req.MarshalBinary()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -222,7 +228,7 @@ func TestEncodeMessageVerySmall(t *testing.T) {
 	}
 	req.SetPathString("x")
 
-	data, err := req.encode()
+	data, err := req.MarshalBinary()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -245,7 +251,7 @@ func TestEncodeMessageVerySmall2(t *testing.T) {
 	}
 	req.SetPathString("/x")
 
-	data, err := req.encode()
+	data, err := req.MarshalBinary()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -269,7 +275,7 @@ func TestEncodeSeveral(t *testing.T) {
 	for p, a := range tests {
 		m := &Message{Type: Confirmable, Code: GET, MessageID: 12345}
 		m.SetPathString(p)
-		b, err := (*m).encode()
+		b, err := m.MarshalBinary()
 		if err != nil {
 			t.Errorf("Error encoding %#v", p)
 			t.Fail()
@@ -295,7 +301,7 @@ func TestEncodePath14(t *testing.T) {
 	}
 	req.SetPathString("123456789ABCDE")
 
-	data, err := req.encode()
+	data, err := req.MarshalBinary()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -319,7 +325,7 @@ func TestEncodePath15(t *testing.T) {
 	}
 	req.SetPathString("123456789ABCDEF")
 
-	data, err := req.encode()
+	data, err := req.MarshalBinary()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -348,7 +354,7 @@ func TestEncodeLargePath(t *testing.T) {
 			req.PathString())
 	}
 
-	data, err := req.encode()
+	data, err := req.MarshalBinary()
 	if err != nil {
 		t.Fatalf("Error encoding request: %v", err)
 	}
@@ -392,7 +398,7 @@ func TestDecodeLargePath(t *testing.T) {
 	exp.SetOption(URIPath, path)
 
 	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", req) {
-		b, _ := exp.encode()
+		b, _ := exp.MarshalBinary()
 		t.Fatalf("Expected\n%#v\ngot\n%#v\nfor %#v", exp, req, b)
 	}
 }

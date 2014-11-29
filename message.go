@@ -361,7 +361,8 @@ func (m *Message) SetOption(opID OptionID, val interface{}) {
 	m.AddOption(opID, val)
 }
 
-func (m *Message) encode() ([]byte, error) {
+// MarshalBinary produces the binary form of this Message.
+func (m *Message) MarshalBinary() ([]byte, error) {
 	tmpbuf := []byte{0, 0}
 	binary.BigEndian.PutUint16(tmpbuf, m.MessageID)
 
@@ -432,23 +433,29 @@ func (m *Message) encode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func parseMessage(data []byte) (rv Message, err error) {
+func parseMessage(data []byte) (Message, error) {
+	rv := Message{}
+	return rv, rv.UnmarshalBinary(data)
+}
+
+// UnmarshalBinary parses the given binary slice as a Message.
+func (m *Message) UnmarshalBinary(data []byte) error {
 	if len(data) < 6 {
-		return rv, errors.New("short packet")
+		return errors.New("short packet")
 	}
 
 	if data[0]>>6 != 1 {
-		return rv, errors.New("invalid version")
+		return errors.New("invalid version")
 	}
 
-	rv.Type = COAPType((data[0] >> 4) & 0x3)
+	m.Type = COAPType((data[0] >> 4) & 0x3)
 	tokenLen := int(data[0] & 0xf)
 	if tokenLen > 8 {
-		return rv, ErrInvalidTokenLen
+		return ErrInvalidTokenLen
 	}
 
-	rv.Code = COAPCode(data[1])
-	rv.MessageID = binary.BigEndian.Uint16(data[2:4])
+	m.Code = COAPCode(data[1])
+	m.MessageID = binary.BigEndian.Uint16(data[2:4])
 
 	b := data[4:]
 	prev := 0
@@ -465,7 +472,7 @@ func parseMessage(data []byte) (rv Message, err error) {
 			b = b[1:]
 		}
 		if len(b) < l {
-			return rv, errors.New("truncated")
+			return errors.New("truncated")
 		}
 		var opval interface{} = b[:l]
 		switch oid {
@@ -483,9 +490,9 @@ func parseMessage(data []byte) (rv Message, err error) {
 		b = b[l:]
 		prev = int(option.ID)
 
-		rv.opts = append(rv.opts, option)
+		m.opts = append(m.opts, option)
 	}
 
-	rv.Payload = b
-	return rv, nil
+	m.Payload = b
+	return nil
 }
