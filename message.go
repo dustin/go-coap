@@ -457,7 +457,11 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 	m.Code = COAPCode(data[1])
 	m.MessageID = binary.BigEndian.Uint16(data[2:4])
 
-	b := data[4:]
+	if tokenLen > 0 {
+		m.Token = make([]byte, tokenLen)
+	}
+	copy(m.Token, data[4:4+tokenLen])
+	b := data[4+tokenLen:]
 	prev := 0
 	for len(b) > 0 {
 		if b[0] == 0xff {
