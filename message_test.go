@@ -293,6 +293,19 @@ func TestEncodeSeveral(t *testing.T) {
 	}
 }
 
+func TestPathAsOption(t *testing.T) {
+	m := &Message{Type: Confirmable, Code: GET, MessageID: 12345}
+	m.SetOption(LocationPath, []string{"a", "b"})
+	got, err := m.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Error marshaling: %v", err)
+	}
+	exp := []byte{0x40, 0x1, 0x30, 0x39, 0x81, 0x61, 0x1, 0x62}
+	if !bytes.Equal(got, exp) {
+		t.Errorf("Got %#v, wanted %#v", got, exp)
+	}
+}
+
 func TestEncodePath14(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,

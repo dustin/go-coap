@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -352,6 +353,14 @@ func (m *Message) RemoveOption(opID OptionID) {
 
 // AddOption adds an option.
 func (m *Message) AddOption(opID OptionID, val interface{}) {
+	iv := reflect.ValueOf(val)
+	if (iv.Kind() == reflect.Slice || iv.Kind() == reflect.Array)	&&
+		iv.Type().Elem().Kind() == reflect.String {
+		for i:=0; i < iv.Len(); i++ {
+			m.opts = append(m.opts, option{opID, iv.Index(i).Interface()})
+		}
+		return
+	}
 	m.opts = append(m.opts, option{opID, val})
 }
 
