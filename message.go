@@ -162,6 +162,7 @@ const (
 	URIHost       = OptionID(3)
 	ETag          = OptionID(4)
 	IfNoneMatch   = OptionID(5)
+	Observe       = OptionID(6) // draft-ietf-observe-16
 	URIPort       = OptionID(7)
 	LocationPath  = OptionID(8)
 	URIPath       = OptionID(11)
@@ -354,9 +355,9 @@ func (m *Message) RemoveOption(opID OptionID) {
 // AddOption adds an option.
 func (m *Message) AddOption(opID OptionID, val interface{}) {
 	iv := reflect.ValueOf(val)
-	if (iv.Kind() == reflect.Slice || iv.Kind() == reflect.Array)	&&
+	if (iv.Kind() == reflect.Slice || iv.Kind() == reflect.Array) &&
 		iv.Type().Elem().Kind() == reflect.String {
-		for i:=0; i < iv.Len(); i++ {
+		for i := 0; i < iv.Len(); i++ {
 			m.opts = append(m.opts, option{opID, iv.Index(i).Interface()})
 		}
 		return
