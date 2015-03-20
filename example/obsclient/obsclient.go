@@ -10,10 +10,11 @@ func main() {
 
 	req := coap.Message{
 		Type:      coap.NonConfirmable,
-		Code:      coap.SUBSCRIBE,
+		Code:      coap.GET,
 		MessageID: 12345,
 	}
 
+	req.AddOption(coap.Observe, 1)
 	req.SetPathString("/some/path")
 
 	c, err := coap.Dial("udp", "localhost:5683")
