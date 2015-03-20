@@ -15,14 +15,13 @@ type COAPType uint8
 
 const (
 	// Confirmable messages require acknowledgements.
-	Confirmable = COAPType(0)
+	Confirmable COAPType = 0
 	// NonConfirmable messages do not require acknowledgements.
-	NonConfirmable = COAPType(1)
-	// Acknowledgement is a message type indicating a response to
-	// a confirmable message.
-	Acknowledgement = COAPType(2)
+	NonConfirmable = 1
+	// Acknowledgement is a message indicating a response to confirmable message.
+	Acknowledgement = 2
 	// Reset indicates a permanent negative acknowledgement.
-	Reset = COAPType(3)
+	Reset = 3
 )
 
 var typeNames = [256]string{
@@ -50,35 +49,35 @@ type COAPCode uint8
 // Request Codes
 const (
 	GET       COAPCode = 1
-	POST      COAPCode = 2
-	PUT       COAPCode = 3
-	DELETE    COAPCode = 4
-	SUBSCRIBE COAPCode = 5
+	POST               = 2
+	PUT                = 3
+	DELETE             = 4
+	SUBSCRIBE          = 5
 )
 
 // Response Codes
 const (
 	Created               COAPCode = 65
-	Deleted               COAPCode = 66
-	Valid                 COAPCode = 67
-	Changed               COAPCode = 68
-	Content               COAPCode = 69
-	BadRequest            COAPCode = 128
-	Unauthorized          COAPCode = 129
-	BadOption             COAPCode = 130
-	Forbidden             COAPCode = 131
-	NotFound              COAPCode = 132
-	MethodNotAllowed      COAPCode = 133
-	NotAcceptable         COAPCode = 134
-	PreconditionFailed    COAPCode = 140
-	RequestEntityTooLarge COAPCode = 141
-	UnsupportedMediaType  COAPCode = 143
-	InternalServerError   COAPCode = 160
-	NotImplemented        COAPCode = 161
-	BadGateway            COAPCode = 162
-	ServiceUnavailable    COAPCode = 163
-	GatewayTimeout        COAPCode = 164
-	ProxyingNotSupported  COAPCode = 165
+	Deleted                        = 66
+	Valid                          = 67
+	Changed                        = 68
+	Content                        = 69
+	BadRequest                     = 128
+	Unauthorized                   = 129
+	BadOption                      = 130
+	Forbidden                      = 131
+	NotFound                       = 132
+	MethodNotAllowed               = 133
+	NotAcceptable                  = 134
+	PreconditionFailed             = 140
+	RequestEntityTooLarge          = 141
+	UnsupportedMediaType           = 143
+	InternalServerError            = 160
+	NotImplemented                 = 161
+	BadGateway                     = 162
+	ServiceUnavailable             = 163
+	GatewayTimeout                 = 164
+	ProxyingNotSupported           = 165
 )
 
 var codeNames = [256]string{
@@ -158,22 +157,21 @@ type OptionID uint8
 
 // Option IDs.
 const (
-	IfMatch       = OptionID(1)
-	URIHost       = OptionID(3)
-	ETag          = OptionID(4)
-	IfNoneMatch   = OptionID(5)
-	Observe       = OptionID(6) // draft-ietf-observe-16
-	URIPort       = OptionID(7)
-	LocationPath  = OptionID(8)
-	URIPath       = OptionID(11)
-	ContentFormat = OptionID(12)
-	MaxAge        = OptionID(14)
-	URIQuery      = OptionID(15)
-	Accept        = OptionID(17)
-	LocationQuery = OptionID(20)
-	ProxyURI      = OptionID(35)
-	ProxyScheme   = OptionID(39)
-	Size1         = OptionID(60)
+	IfMatch       OptionID = 1
+	URIHost                = 3
+	ETag                   = 4
+	IfNoneMatch            = 5
+	URIPort                = 7
+	LocationPath           = 8
+	URIPath                = 11
+	ContentFormat          = 12
+	MaxAge                 = 14
+	URIQuery               = 15
+	Accept                 = 17
+	LocationQuery          = 20
+	ProxyURI               = 35
+	ProxyScheme            = 39
+	Size1                  = 60
 )
 
 // MediaType specifies the content type of a message.
@@ -181,12 +179,12 @@ type MediaType byte
 
 // Content types.
 const (
-	TextPlain     = MediaType(0)  // text/plain;charset=utf-8
-	AppLinkFormat = MediaType(40) // application/link-format
-	AppXML        = MediaType(41) // application/xml
-	AppOctets     = MediaType(42) // application/octet-stream
-	AppExi        = MediaType(47) // application/exi
-	AppJSON       = MediaType(50) // application/json
+	TextPlain     MediaType = 0  // text/plain;charset=utf-8
+	AppLinkFormat           = 40 // application/link-format
+	AppXML                  = 41 // application/xml
+	AppOctets               = 42 // application/octet-stream
+	AppExi                  = 47 // application/exi
+	AppJSON                 = 50 // application/json
 )
 
 type option struct {
