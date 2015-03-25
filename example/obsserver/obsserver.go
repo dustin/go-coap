@@ -39,7 +39,8 @@ func main() {
 		coap.FuncHandler(func(l *net.UDPConn, a *net.UDPAddr, m *coap.Message) *coap.Message {
 			log.Printf("Got message path=%q: %#v from %v", m.Path(), m, a)
 			if m.Code == coap.GET && m.Option(coap.Observe) != nil {
-				if value, ok := m.Option(coap.Observe).([]uint8); ok && len(value) >= 1 && value[0] == 1 {
+				if value, ok := m.Option(coap.Observe).([]uint8); ok &&
+					len(value) >= 1 && value[0] == 1 {
 					go periodicTransmitter(l, a, m)
 				}
 			}
