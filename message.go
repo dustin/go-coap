@@ -159,6 +159,7 @@ const (
 	URIHost                = 3
 	ETag                   = 4
 	IfNoneMatch            = 5
+	Observe                = 6
 	URIPort                = 7
 	LocationPath           = 8
 	URIPath                = 11
