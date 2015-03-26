@@ -48,11 +48,10 @@ type COAPCode uint8
 
 // Request Codes
 const (
-	GET       COAPCode = 1
-	POST               = 2
-	PUT                = 3
-	DELETE             = 4
-	SUBSCRIBE          = 5
+	GET    COAPCode = 1
+	POST            = 2
+	PUT             = 3
+	DELETE          = 4
 )
 
 // Response Codes
@@ -85,7 +84,6 @@ var codeNames = [256]string{
 	POST:                  "POST",
 	PUT:                   "PUT",
 	DELETE:                "DELETE",
-	SUBSCRIBE:             "SUBSCRIBE",
 	Created:               "Created",
 	Deleted:               "Deleted",
 	Valid:                 "Valid",
