@@ -56,7 +56,7 @@ func (m *TcpMessage) UnmarshalBinary(data []byte) error {
 }
 
 func Decode(reader *bufio.Reader) (*TcpMessage, error) {
-	header := make([]byte, 2)
+	header := []byte{0, 0}
 
 	nr, err := reader.Read(header)
 
