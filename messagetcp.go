@@ -6,7 +6,8 @@ import (
 	"errors"
 )
 
-// TCP version of the CoAP Message
+// TCPMessage is a CoAP Message that can encode itself for TCP
+// transport.
 type TcpMessage struct {
 	Message
 }
