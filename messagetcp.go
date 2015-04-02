@@ -1,12 +1,12 @@
 package coap
 
 import (
-	"bufio"
 	"encoding/binary"
 	"errors"
+	"io"
 )
 
-// TCPMessage is a CoAP Message that can encode itself for TCP
+// TcpMessage is a CoAP Message that can encode itself for TCP
 // transport.
 type TcpMessage struct {
 	Message
@@ -55,22 +55,23 @@ func (m *TcpMessage) UnmarshalBinary(data []byte) error {
 	return m.Message.UnmarshalBinary(data)
 }
 
-func Decode(reader *bufio.Reader) (*TcpMessage, error) {
+// Decode reads a single message from its input.
+func Decode(r io.Reader) (*TcpMessage, error) {
 	header := []byte{0, 0}
 
-	nr, err := reader.Read(header)
+	_, err := io.ReadFull(r, header)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if nr < 2 {
-		return nil, errors.New("can't read 2 bytes")
-	}
-
 	ln := binary.BigEndian.Uint16(header)
 
 	packet := make([]byte, ln)
+	_, err = io.ReadFull(r, packet)
+	if err != nil {
+		return nil, err
+	}
 
 	m := TcpMessage{}
 
