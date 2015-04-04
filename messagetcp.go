@@ -49,23 +49,16 @@ func (m *TcpMessage) UnmarshalBinary(data []byte) error {
 		return errors.New("short packet")
 	}
 
-	data[0] = data[2]
-	data[1] = data[3]
-
 	return m.Message.UnmarshalBinary(data)
 }
 
 // Decode reads a single message from its input.
 func Decode(r io.Reader) (*TcpMessage, error) {
-	header := []byte{0, 0}
-
-	_, err := io.ReadFull(r, header)
-
+	var ln uint16
+	err := binary.Read(r, binary.BigEndian, &ln)
 	if err != nil {
 		return nil, err
 	}
-
-	ln := binary.BigEndian.Uint16(header)
 
 	packet := make([]byte, ln)
 	_, err = io.ReadFull(r, packet)
