@@ -13,7 +13,6 @@ type TcpMessage struct {
 }
 
 func (m *TcpMessage) MarshalBinary() ([]byte, error) {
-
 	bin, err := m.Message.MarshalBinary()
 	if err != nil {
 		return nil, err
@@ -35,13 +34,10 @@ func (m *TcpMessage) MarshalBinary() ([]byte, error) {
 		   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 	*/
 
-	bin[2] = bin[0]
-	bin[3] = bin[1]
+	l := []byte{0, 0}
+	binary.BigEndian.PutUint16(l, uint16(len(bin)))
 
-	// insert len
-	binary.BigEndian.PutUint16(bin, uint16(len(bin)-2))
-
-	return bin, nil
+	return append(l, bin...), nil
 }
 
 func (m *TcpMessage) UnmarshalBinary(data []byte) error {
