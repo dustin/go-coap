@@ -1,6 +1,7 @@
 package coap
 
 import (
+	"errors"
 	"log"
 	"math/rand"
 	"net"
@@ -8,20 +9,23 @@ import (
 
 var nextMID uint16 = uint16(rand.Int())
 
+// An incomming request waiting to be responded
 type Request interface {
 	Message() *Message
 	Addr() net.Addr
+
+	// Ack sends a separate acknowledgement from the response. To be used if the request will take some times for avoiding unattended retransmission from the sender.
 	Ack() error
 
-	RespondCode(code COAPCode) error
-
-	Respond(code COAPCode, content []byte, contentType *MediaType) error
+	// Respond with a content
+	Respond(code COAPCode, content []byte, options map[OptionID]interface{}) error
 }
 
 type RequestHandler interface {
 	// Handle the message and optionally return a response message.
 	Handle(rq Request) error
 }
+
 type funcRqHandler func(rq Request) error
 
 func (f funcRqHandler) Handle(rq Request) error {
@@ -33,6 +37,7 @@ func FuncRqHandler(f func(rq Request) error) RequestHandler {
 	return funcRqHandler(f)
 }
 
+// UdpListenAndServer listen and server CoAP resources using the given RequestHandler
 func UdpListenAndServe(n, addr string, rh RequestHandler) error {
 
 	uaddr, err := net.ResolveUDPAddr(n, addr)
@@ -44,6 +49,8 @@ func UdpListenAndServe(n, addr string, rh RequestHandler) error {
 	if err != nil {
 		return err
 	}
+
+	defer l.Close()
 
 	// init retransmission facilities
 	retrans := NewRetransmitter(l)
@@ -93,7 +100,7 @@ func (rq *UDPRequest) Addr() net.Addr {
 }
 
 func (rq *UDPRequest) Ack() error {
-	// if it's not an ackable message or it was already acked
+	// if it's not an confirmable message or it was already acked
 	// just do nothing silently
 	if rq.msg.Type != Confirmable || rq.acked {
 		return nil
@@ -112,12 +119,8 @@ func (rq *UDPRequest) Ack() error {
 	rq.acked = true
 	return nil
 }
-func (rq *UDPRequest) RespondCode(code COAPCode) error {
-	return rq.Respond(code, []byte{}, nil)
 
-}
-
-func (rq *UDPRequest) Respond(code COAPCode, content []byte, contentType *MediaType) error {
+func (rq *UDPRequest) Respond(code COAPCode, content []byte, options map[OptionID]interface{}) error {
 	var msg Message
 
 	if rq.acked {
@@ -142,5 +145,116 @@ func (rq *UDPRequest) Respond(code COAPCode, content []byte, contentType *MediaT
 		}
 	}
 
+	for k, v := range options {
+		msg.AddOption(k, v)
+	}
 	return rq.retrans.Record(msg, rq.addr)
+}
+
+func TcpListenAndServe(n, addr string, rh RequestHandler) error {
+
+	taddr, err := net.ResolveTCPAddr(n, addr)
+	if err != nil {
+		return err
+	}
+
+	l, err := net.ListenTCP(n, taddr)
+	if err != nil {
+		return err
+	}
+
+	defer l.Close()
+
+	for {
+		cnx, err := l.Accept()
+		if err != nil {
+			return err
+		}
+
+		go func() {
+			buf := make([]byte, maxPktLen)
+
+			for {
+				nr, err := cnx.Read(buf)
+				if err != nil {
+					log.Print(err)
+				}
+				var msg TCPMessage
+				err = msg.UnmarshalBinary(buf[:nr])
+				if err == nil {
+					log.Println(err)
+					break
+				}
+				handleTCPRequest(&msg, cnx, rh)
+			}
+			cnx.Close()
+
+		}()
+	}
+
+	return nil
+}
+
+func handleTCPRequest(msg *TCPMessage, s net.Conn, rh RequestHandler) {
+	rq := TCPRequest{
+		msg: msg,
+		s:   s,
+	}
+
+	rh.Handle(&rq)
+}
+
+type TCPRequest struct {
+	msg *TCPMessage
+	s   net.Conn
+}
+
+func (rq *TCPRequest) Message() *Message {
+	return &rq.msg.Message
+}
+
+func (rq *TCPRequest) Addr() net.Addr {
+	return rq.s.RemoteAddr()
+}
+
+// Ack is not used for TCP CoAP because TCP is reliable
+func (rq *TCPRequest) Ack() error {
+	return nil
+}
+
+func (rq *TCPRequest) Respond(code COAPCode, content []byte, options map[OptionID]interface{}) error {
+	var msg TCPMessage
+	// piggybacked answer
+	msg = TCPMessage{
+		Message: Message{
+			Type:      Acknowledgement,
+			Code:      code,
+			MessageID: 0,
+			Payload:   content,
+			Token:     rq.msg.Token,
+		},
+	}
+
+	for k, v := range options {
+		msg.AddOption(k, v)
+	}
+
+	// encode and send
+	bin, err := msg.MarshalBinary()
+
+	if err != nil {
+		return err
+	}
+
+	nb, err := rq.s.Write(bin)
+
+	if err != nil {
+		return err
+	}
+
+	if nb != len(bin) {
+		return errors.New("didn't totaly write the TCP message")
+	}
+
+	return nil
 }
