@@ -368,6 +368,14 @@ func (m *Message) SetOption(opID OptionID, val interface{}) {
 	m.AddOption(opID, val)
 }
 
+const (
+	extoptByteCode   = 13
+	extoptByteAddend = 13
+	extoptWordCode   = 14
+	extoptWordAddend = 269
+	extoptError      = 15
+)
+
 // MarshalBinary produces the binary form of this Message.
 func (m *Message) MarshalBinary() ([]byte, error) {
 	tmpbuf := []byte{0, 0}
@@ -397,36 +405,74 @@ func (m *Message) MarshalBinary() ([]byte, error) {
 
 	/*
 	     0   1   2   3   4   5   6   7
-	   +---+---+---+---+---+---+---+---+
-	   | Option Delta  |    Length     | for 0..14
-	   +---+---+---+---+---+---+---+---+
-	   |   Option Value ...
-	   +---+---+---+---+---+---+---+---+
-	                                               for 15..270:
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	   | Option Delta  | 1   1   1   1 |          Length - 15          |
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-	   |   Option Value ...
-	   +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
+	   +---------------+---------------+
+	   |               |               |
+	   |  Option Delta | Option Length |   1 byte
+	   |               |               |
+	   +---------------+---------------+
+	   \                               \
+	   /         Option Delta          /   0-2 bytes
+	   \          (extended)           \
+	   +-------------------------------+
+	   \                               \
+	   /         Option Length         /   0-2 bytes
+	   \          (extended)           \
+	   +-------------------------------+
+	   \                               \
+	   /                               /
+	   \                               \
+	   /         Option Value          /   0 or more bytes
+	   \                               \
+	   /                               /
+	   \                               \
+	   +-------------------------------+
+
+	   See parseExtOption(), extendOption()
+	   and writeOptionHeader() below for implementation details
 	*/
+
+	extendOpt := func(opt int) (int, int) {
+		ext := 0
+		if opt >= extoptByteAddend {
+			if opt >= extoptWordAddend {
+				ext = opt - extoptWordAddend
+				opt = extoptWordCode
+			} else {
+				ext = opt - extoptByteAddend
+				opt = extoptByteCode
+			}
+		}
+		return opt, ext
+	}
+
+	writeOptHeader := func(delta, length int) {
+		d, dx := extendOpt(delta)
+		l, lx := extendOpt(length)
+
+		buf.WriteByte(byte(d<<4) | byte(l))
+
+		tmp := []byte{0, 0}
+		writeExt := func(opt, ext int) {
+			switch opt {
+			case extoptByteCode:
+				buf.WriteByte(byte(ext))
+			case extoptWordCode:
+				binary.BigEndian.PutUint16(tmp, uint16(ext))
+				buf.Write(tmp)
+			}
+		}
+
+		writeExt(d, dx)
+		writeExt(l, lx)
+	}
 
 	sort.Sort(&m.opts)
 
 	prev := 0
+
 	for _, o := range m.opts {
 		b := o.toBytes()
-		if len(b) >= 15 {
-			buf.Write([]byte{
-				byte(int(o.ID)-prev)<<4 | 15,
-				byte(len(b) - 15),
-			})
-		} else {
-			buf.Write([]byte{byte(int(o.ID)-prev)<<4 | byte(len(b))})
-		}
-		if int(o.ID)-prev > 15 {
-			return nil, ErrOptionGapTooLarge
-		}
-
+		writeOptHeader(int(o.ID)-prev, len(b))
 		buf.Write(b)
 		prev = int(o.ID)
 	}
@@ -470,40 +516,60 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 	copy(m.Token, data[4:4+tokenLen])
 	b := data[4+tokenLen:]
 	prev := 0
+
+	parseExtOpt := func(opt int) int {
+		switch opt {
+		case extoptByteCode:
+			opt = int(b[0]) + extoptByteAddend
+			b = b[1:]
+		case extoptWordCode:
+			opt = int(binary.BigEndian.Uint16(b[:2])) + extoptWordAddend
+			b = b[2:]
+		}
+		return opt
+	}
+
 	for len(b) > 0 {
 		if b[0] == 0xff {
 			b = b[1:]
 			break
 		}
-		oid := OptionID(prev + int(b[0]>>4))
-		l := int(b[0] & 0xf)
-		b = b[1:]
-		if l > 14 {
-			l += int(b[0])
-			b = b[1:]
+
+		delta := int(b[0] >> 4)
+		length := int(b[0] & 0x0f)
+
+		if delta == extoptError || length == extoptError {
+			return errors.New("unexpected extended option marker")
 		}
-		if len(b) < l {
+
+		b = b[1:]
+
+		delta = parseExtOpt(delta)
+		length = parseExtOpt(length)
+
+		if len(b) < length {
 			return errors.New("truncated")
 		}
-		var opval interface{} = b[:l]
+		oid := OptionID(prev + delta)
+
+		var opval interface{} = b[:length]
 		switch oid {
 		case URIPort, ContentFormat, MaxAge, Accept, Size1:
-			opval = decodeInt(b[:l])
+			opval = decodeInt(b[:length])
 		case URIHost, LocationPath, URIPath, URIQuery, LocationQuery,
 			ProxyURI, ProxyScheme:
-			opval = string(b[:l])
+			opval = string(b[:length])
 		}
 
 		option := option{
 			ID:    oid,
 			Value: opval,
 		}
-		b = b[l:]
+		b = b[length:]
 		prev = int(option.ID)
 
 		m.opts = append(m.opts, option)
 	}
-
 	m.Payload = b
 	return nil
 }
