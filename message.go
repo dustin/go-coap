@@ -466,7 +466,7 @@ func (m *Message) MarshalBinary() ([]byte, error) {
 		writeExt(l, lx)
 	}
 
-	sort.Sort(&m.opts)
+	sort.Stable(&m.opts)
 
 	prev := 0
 
