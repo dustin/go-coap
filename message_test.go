@@ -13,6 +13,16 @@ var (
 	_ = encoding.BinaryUnmarshaler(&Message{})
 )
 
+func TestMediaTypes(t *testing.T) {
+	types := []interface{}{TextPlain, AppLinkFormat, AppXML, AppOctets, AppExi, AppJSON}
+	exp := "coap.MediaType"
+	for _, typ := range types {
+		if got := fmt.Sprintf("%T", typ); got != exp {
+			t.Errorf("Error on %#v, expected %q, was %q", typ, exp, got)
+		}
+	}
+}
+
 func TestOptionToBytes(t *testing.T) {
 	tests := []struct {
 		in  interface{}
