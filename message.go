@@ -338,10 +338,7 @@ func (m *Message) SetPathString(s string) {
 
 // SetPath updates or adds a LocationPath attribute on this message.
 func (m *Message) SetPath(s []string) {
-	m.RemoveOption(URIPath)
-	for _, p := range s {
-		m.AddOption(URIPath, p)
-	}
+	m.SetOption(URIPath, s)
 }
 
 // RemoveOption removes all references to an option
