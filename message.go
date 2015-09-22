@@ -336,7 +336,7 @@ func (m *Message) SetPathString(s string) {
 	m.SetPath(strings.Split(s, "/"))
 }
 
-// SetPath updates or adds a LocationPath attribute on this message.
+// SetPath updates or adds a URIPath attribute on this message.
 func (m *Message) SetPath(s []string) {
 	m.SetOption(URIPath, s)
 }
