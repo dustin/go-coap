@@ -179,11 +179,11 @@ type MediaType byte
 // Content types.
 const (
 	TextPlain     MediaType = 0  // text/plain;charset=utf-8
-	AppLinkFormat           = 40 // application/link-format
-	AppXML                  = 41 // application/xml
-	AppOctets               = 42 // application/octet-stream
-	AppExi                  = 47 // application/exi
-	AppJSON                 = 50 // application/json
+	AppLinkFormat MediaType = 40 // application/link-format
+	AppXML        MediaType = 41 // application/xml
+	AppOctets     MediaType = 42 // application/octet-stream
+	AppExi        MediaType = 47 // application/exi
+	AppJSON       MediaType = 50 // application/json
 )
 
 type option struct {
