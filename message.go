@@ -551,7 +551,9 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 
 		var opval interface{} = b[:length]
 		switch oid {
-		case URIPort, ContentFormat, MaxAge, Accept, Size1:
+		case ContentFormat, Accept:
+			opval = MediaType(decodeInt(b[:length]))
+		case URIPort, MaxAge, Size1:
 			opval = decodeInt(b[:length])
 		case URIHost, LocationPath, URIPath, URIQuery, LocationQuery,
 			ProxyURI, ProxyScheme:

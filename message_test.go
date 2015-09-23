@@ -601,3 +601,24 @@ func TestErrorOptionMarker(t *testing.T) {
 		t.Errorf("Unexpected success parsing malformed option: %v", msg)
 	}
 }
+
+func TestDecodeContentFormatOptionToMediaType(t *testing.T) {
+	data := []byte{
+		0x40, 0x1, 0x30, 0x39, 0xc1, 0x32, 0x51, 0x29,
+	}
+
+	parsedMsg, err := parseMessage(data)
+	if err != nil {
+		t.Fatalf("Error parsing request: %v", err)
+	}
+
+	expected := "coap.MediaType"
+	actualContentFormatType := fmt.Sprintf("%T", parsedMsg.Option(ContentFormat))
+	if expected != actualContentFormatType {
+		t.Fatalf("Expected %#v got %#v", expected, actualContentFormatType)
+	}
+	actualAcceptType := fmt.Sprintf("%T", parsedMsg.Option(Accept))
+	if expected != actualAcceptType {
+		t.Fatalf("Expected %#v got %#v", expected, actualAcceptType)
+	}
+}
