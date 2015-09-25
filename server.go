@@ -80,13 +80,24 @@ func ListenAndServe(n, addr string, rh Handler) error {
 		return err
 	}
 
+	return Serve(l, rh)
+}
+
+// Serve processes incoming UDP packets on the given listener, and processes
+// these requests forever (or until the listener is closed).
+func Serve(listener *net.UDPConn, rh Handler) error {
 	buf := make([]byte, maxPktLen)
 	for {
-		nr, addr, err := l.ReadFromUDP(buf)
-		if err == nil {
-			tmp := make([]byte, nr)
-			copy(tmp, buf)
-			go handlePacket(l, tmp, addr, rh)
+		nr, addr, err := listener.ReadFromUDP(buf)
+		if err != nil {
+			if neterr, ok := err.(net.Error); ok && (neterr.Temporary() || neterr.Timeout()) {
+				time.Sleep(5 * time.Millisecond)
+				continue
+			}
+			return err
 		}
+		tmp := make([]byte, nr)
+		copy(tmp, buf)
+		go handlePacket(listener, tmp, addr, rh)
 	}
 }
