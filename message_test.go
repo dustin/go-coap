@@ -13,6 +13,49 @@ var (
 	_ = encoding.BinaryUnmarshaler(&Message{})
 )
 
+// assertEqualMessages compares the e(xptected) message to the a(ctual) message
+// and reports any diffs with t.Errorf.
+func assertEqualMessages(t *testing.T, e, a Message) {
+	if e.Type != a.Type {
+		t.Errorf("Expected type %v, got %v", e.Type, a.Type)
+	}
+	if e.Code != a.Code {
+		t.Errorf("Expected code %v, got %v", e.Code, a.Code)
+	}
+	if e.MessageID != a.MessageID {
+		t.Errorf("Expected MessageID %v, got %v", e.MessageID, a.MessageID)
+	}
+	if !bytes.Equal(e.Token, a.Token) {
+		t.Errorf("Expected token %#v, got %#v", e.Token, a.Token)
+	}
+	if !bytes.Equal(e.Payload, a.Payload) {
+		t.Errorf("Expected payload %#v, got %#v", e.Payload, a.Payload)
+	}
+
+	if len(e.opts) != len(a.opts) {
+		t.Errorf("Expected %v options, got %v", len(e.opts), len(a.opts))
+	} else {
+		for i, _ := range e.opts {
+			if e.opts[i].ID != a.opts[i].ID {
+				t.Errorf("Expected option ID %v, got %v", e.opts[i].ID != a.opts[i].ID)
+				continue
+			}
+			switch e.opts[i].Value.(type) {
+			case []byte:
+				expected := e.opts[i].Value.([]byte)
+				actual := a.opts[i].Value.([]byte)
+				if !bytes.Equal(expected, actual) {
+					t.Errorf("Expected Option ID %v value %v, got %v", e.opts[i].ID, expected, actual)
+				}
+			default:
+				if e.opts[i].Value != a.opts[i].Value {
+					t.Errorf("Expected Option ID %v value %v, got %v", e.opts[i].ID, e.opts[i].Value, a.opts[i].Value)
+				}
+			}
+		}
+	}
+}
+
 func TestMediaTypes(t *testing.T) {
 	types := []interface{}{TextPlain, AppLinkFormat, AppXML, AppOctets, AppExi, AppJSON}
 	exp := "coap.MediaType"
@@ -696,4 +739,42 @@ func TestDecodeContentFormatOptionToMediaType(t *testing.T) {
 	if expected != actualAcceptType {
 		t.Fatalf("Expected %#v got %#v", expected, actualAcceptType)
 	}
+}
+
+func TestEncodeMessageWithAllOptions(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+		Token:     []byte("TOKEN"),
+		Payload:   []byte("PAYLOAD"),
+	}
+
+	req.AddOption(IfMatch, []byte("IFMATCH"))
+	req.AddOption(URIHost, "URIHOST")
+	req.AddOption(ETag, []byte("ETAG"))
+	req.AddOption(IfNoneMatch, []byte{})
+	req.AddOption(Observe, uint32(9999))
+	req.AddOption(URIPort, uint32(5683))
+	req.AddOption(LocationPath, "LOCATIONPATH")
+	req.AddOption(URIPath, "URIPATH")
+	req.AddOption(ContentFormat, TextPlain)
+	req.AddOption(MaxAge, uint32(9999))
+	req.AddOption(URIQuery, "URIQUERY")
+	req.AddOption(Accept, TextPlain)
+	req.AddOption(LocationQuery, "LOCATIONQUERY")
+	req.AddOption(ProxyURI, "PROXYURI")
+	req.AddOption(ProxyScheme, "PROXYSCHEME")
+	req.AddOption(Size1, uint32(9999))
+
+	data, err := req.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	parsedMsg, err := parseMessage(data)
+	if err != nil {
+		t.Fatalf("Error parsing binary packet: %v", err)
+	}
+	assertEqualMessages(t, req, parsedMsg)
 }

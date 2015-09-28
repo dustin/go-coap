@@ -1,44 +1,9 @@
 package coap
 
 import (
-	"bytes"
 	"net"
 	"testing"
 )
-
-// compareMessages compares the e(xptected) message to the a(ctual) message and
-// reports diffs with t.Errorf.
-func assertEqualMessages(t *testing.T, e, a Message) {
-	if e.Type != a.Type {
-		t.Errorf("Expected type %v, got %v", e.Type, a.Type)
-	}
-	if e.Code != a.Code {
-		t.Errorf("Expected code %v, got %v", e.Code, a.Code)
-	}
-	if e.MessageID != a.MessageID {
-		t.Errorf("Expected MessageID %v, got %v", e.MessageID, a.MessageID)
-	}
-	if !bytes.Equal(e.Token, a.Token) {
-		t.Errorf("Expected token %#v, got %#v", e.Token, a.Token)
-	}
-	if !bytes.Equal(e.Payload, a.Payload) {
-		t.Errorf("Expected payload %#v, got %#v", e.Payload, a.Payload)
-	}
-
-	optionsEqual := true
-	if len(e.opts) != len(a.opts) {
-		optionsEqual = false
-	} else {
-		for i, _ := range e.opts {
-			if e.opts[i] != a.opts[i] {
-				optionsEqual = false
-			}
-		}
-	}
-	if !optionsEqual {
-		t.Errorf("Expected options %#v, got %#v", e.opts, a.opts)
-	}
-}
 
 func startUDPLisenter(t *testing.T) (*net.UDPConn, string) {
 	udpAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
