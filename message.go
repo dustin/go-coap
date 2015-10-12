@@ -573,6 +573,9 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 	if tokenLen > 0 {
 		m.Token = make([]byte, tokenLen)
 	}
+	if len(data) < 4+tokenLen {
+		return errors.New("truncated")
+	}
 	copy(m.Token, data[4:4+tokenLen])
 	b := data[4+tokenLen:]
 	prev := 0

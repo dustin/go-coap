@@ -185,6 +185,12 @@ func TestInvalidMessageParsing(t *testing.T) {
 	if err == nil {
 		t.Errorf("Unexpected success parsing invalid message: %v", msg)
 	}
+
+	// TKL=5 but packet is truncated
+	msg, err = parseMessage([]byte{0x45, 0, 0, 0, 0, 0})
+	if err == nil {
+		t.Errorf("Unexpected success parsing invalid message: %v", msg)
+	}
 }
 
 func TestOptionsWithIllegalLengthAreIgnoredDuringParsing(t *testing.T) {
