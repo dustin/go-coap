@@ -190,25 +190,23 @@ func TestEncodeMessageSmallWithPayload(t *testing.T) {
 }
 
 func TestInvalidMessageParsing(t *testing.T) {
-	msg, err := parseMessage(nil)
-	if err == nil {
-		t.Errorf("Unexpected success parsing short message: %v", msg)
+	var invalidPackets = [][]byte{
+		nil,
+		{0x40},
+		{0x40, 0},
+		{0x40, 0, 0},
+		{0xff, 0, 0, 0, 0, 0},
+		{0x4f, 0, 0, 0, 0, 0},
+		{0x45, 0, 0, 0, 0, 0},                // TKL=5 but packet is truncated
+		{0x40, 0x01, 0x30, 0x39, 0x4d},       // Extended word length but no extra length byte
+		{0x40, 0x01, 0x30, 0x39, 0x4e, 0x01}, // Extended word length but no full extra length word
 	}
 
-	msg, err = parseMessage([]byte{0xff, 0, 0, 0, 0, 0})
-	if err == nil {
-		t.Errorf("Unexpected success parsing invalid message: %v", msg)
-	}
-
-	msg, err = parseMessage([]byte{0x4f, 0, 0, 0, 0, 0})
-	if err == nil {
-		t.Errorf("Unexpected success parsing invalid message: %v", msg)
-	}
-
-	// TKL=5 but packet is truncated
-	msg, err = parseMessage([]byte{0x45, 0, 0, 0, 0, 0})
-	if err == nil {
-		t.Errorf("Unexpected success parsing invalid message: %v", msg)
+	for _, data := range invalidPackets {
+		msg, err := parseMessage(data)
+		if err == nil {
+			t.Errorf("Unexpected success parsing short message (%#v): %v", data, msg)
+		}
 	}
 }
 

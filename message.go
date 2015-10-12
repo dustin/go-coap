@@ -580,16 +580,22 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 	b := data[4+tokenLen:]
 	prev := 0
 
-	parseExtOpt := func(opt int) int {
+	parseExtOpt := func(opt int) (int, error) {
 		switch opt {
 		case extoptByteCode:
+			if len(b) < 1 {
+				return -1, errors.New("truncated")
+			}
 			opt = int(b[0]) + extoptByteAddend
 			b = b[1:]
 		case extoptWordCode:
+			if len(b) < 2 {
+				return -1, errors.New("truncated")
+			}
 			opt = int(binary.BigEndian.Uint16(b[:2])) + extoptWordAddend
 			b = b[2:]
 		}
-		return opt
+		return opt, nil
 	}
 
 	for len(b) > 0 {
@@ -607,8 +613,14 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 
 		b = b[1:]
 
-		delta = parseExtOpt(delta)
-		length = parseExtOpt(length)
+		delta, err := parseExtOpt(delta)
+		if err != nil {
+			return err
+		}
+		length, err = parseExtOpt(length)
+		if err != nil {
+			return err
+		}
 
 		if len(b) < length {
 			return errors.New("truncated")
