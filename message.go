@@ -553,7 +553,7 @@ func parseMessage(data []byte) (Message, error) {
 
 // UnmarshalBinary parses the given binary slice as a Message.
 func (m *Message) UnmarshalBinary(data []byte) error {
-	if len(data) < 6 {
+	if len(data) < 4 {
 		return errors.New("short packet")
 	}
 

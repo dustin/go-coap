@@ -118,6 +118,25 @@ func TestCodeString(t *testing.T) {
 	}
 }
 
+func TestEncodeMessageWithoutOptionsAndPayload(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+
+	data, err := req.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	// Inspected by hand.
+	exp := []byte{0x40, 0x1, 0x30, 0x39}
+	if !bytes.Equal(exp, data) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
+	}
+}
+
 func TestEncodeMessageSmall(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
@@ -218,6 +237,30 @@ func TestOptionsWithIllegalLengthAreIgnoredDuringParsing(t *testing.T) {
 	}
 	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", msg) {
 		t.Errorf("Expected\n%#v\ngot\n%#v", exp, msg)
+	}
+}
+
+func TestDecodeMessageWithoutOptionsAndPayload(t *testing.T) {
+	input := []byte{0x40, 0x1, 0x30, 0x39}
+	msg, err := parseMessage(input)
+	if err != nil {
+		t.Fatalf("Error parsing message: %v", err)
+	}
+
+	if msg.Type != Confirmable {
+		t.Errorf("Expected message type confirmable, got %v", msg.Type)
+	}
+	if msg.Code != GET {
+		t.Errorf("Expected message code GET, got %v", msg.Code)
+	}
+	if msg.MessageID != 12345 {
+		t.Errorf("Expected message ID 12345, got %v", msg.MessageID)
+	}
+	if len(msg.Token) != 0 {
+		t.Errorf("Incorrect token: %q", msg.Token)
+	}
+	if len(msg.Payload) != 0 {
+		t.Errorf("Incorrect payload: %q", msg.Payload)
 	}
 }
 
