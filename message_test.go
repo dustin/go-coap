@@ -187,6 +187,34 @@ func TestInvalidMessageParsing(t *testing.T) {
 	}
 }
 
+func TestOptionsWithIllegalLengthAreIgnoredDuringParsing(t *testing.T) {
+	exp := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 0xabcd,
+		Payload:   []byte{},
+	}
+	msg, err := parseMessage([]byte{0x40, 0x01, 0xab, 0xcd,
+		0x73, // URI-Port option (uint) with length 3 (valid lengths are 0-2)
+		0x11, 0x22, 0x33, 0xff})
+	if err != nil {
+		t.Fatalf("Error parsing message: %v", err)
+	}
+	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", msg) {
+		t.Errorf("Expected\n%#v\ngot\n%#v", exp, msg)
+	}
+
+	msg, err = parseMessage([]byte{0x40, 0x01, 0xab, 0xcd,
+		0xd5, 0x01, // Max-Age option (uint) with length 5 (valid lengths are 0-4)
+		0x11, 0x22, 0x33, 0x44, 0x55, 0xff})
+	if err != nil {
+		t.Fatalf("Error parsing message: %v", err)
+	}
+	if fmt.Sprintf("%#v", exp) != fmt.Sprintf("%#v", msg) {
+		t.Errorf("Expected\n%#v\ngot\n%#v", exp, msg)
+	}
+}
+
 func TestDecodeMessageSmallWithPayload(t *testing.T) {
 	input := []byte{
 		0x40, 0x1, 0x30, 0x39, 0x21, 0x3,

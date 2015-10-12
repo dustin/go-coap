@@ -173,6 +173,42 @@ const (
 	Size1         OptionID = 60
 )
 
+// Option value format (RFC7252 section 3.2)
+type valueFormat uint8
+
+const (
+	valueUnknown valueFormat = iota
+	valueEmpty
+	valueOpaque
+	valueUint
+	valueString
+)
+
+type optionDef struct {
+	valueFormat valueFormat
+	minLen      int
+	maxLen      int
+}
+
+var optionDefs = [256]optionDef{
+	IfMatch:       optionDef{valueFormat: valueOpaque, minLen: 0, maxLen: 8},
+	URIHost:       optionDef{valueFormat: valueString, minLen: 1, maxLen: 255},
+	ETag:          optionDef{valueFormat: valueOpaque, minLen: 1, maxLen: 8},
+	IfNoneMatch:   optionDef{valueFormat: valueEmpty, minLen: 0, maxLen: 0},
+	Observe:       optionDef{valueFormat: valueUint, minLen: 0, maxLen: 3},
+	URIPort:       optionDef{valueFormat: valueUint, minLen: 0, maxLen: 2},
+	LocationPath:  optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
+	URIPath:       optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
+	ContentFormat: optionDef{valueFormat: valueUint, minLen: 0, maxLen: 2},
+	MaxAge:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
+	URIQuery:      optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
+	Accept:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 2},
+	LocationQuery: optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
+	ProxyURI:      optionDef{valueFormat: valueString, minLen: 1, maxLen: 1034},
+	ProxyScheme:   optionDef{valueFormat: valueString, minLen: 1, maxLen: 255},
+	Size1:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
+}
+
 // MediaType specifies the content type of a message.
 type MediaType byte
 
@@ -242,6 +278,33 @@ func (o option) toBytes() []byte {
 	}
 
 	return encodeInt(v)
+}
+
+func parseOptionValue(optionID OptionID, valueBuf []byte) interface{} {
+	def := optionDefs[optionID]
+	if def.valueFormat == valueUnknown {
+		// Skip unrecognized options (RFC7252 section 5.4.1)
+		return nil
+	}
+	if len(valueBuf) < def.minLen || len(valueBuf) > def.maxLen {
+		// Skip options with illegal value length (RFC7252 section 5.4.3)
+		return nil
+	}
+	switch def.valueFormat {
+	case valueUint:
+		intValue := decodeInt(valueBuf)
+		if optionID == ContentFormat || optionID == Accept {
+			return MediaType(intValue)
+		} else {
+			return intValue
+		}
+	case valueString:
+		return string(valueBuf)
+	case valueOpaque, valueEmpty:
+		return valueBuf
+	}
+	// Skip unrecognized options (should never be reached)
+	return nil
 }
 
 type options []option
@@ -547,27 +610,15 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 		if len(b) < length {
 			return errors.New("truncated")
 		}
+
 		oid := OptionID(prev + delta)
-
-		var opval interface{} = b[:length]
-		switch oid {
-		case ContentFormat, Accept:
-			opval = MediaType(decodeInt(b[:length]))
-		case URIPort, MaxAge, Size1:
-			opval = decodeInt(b[:length])
-		case URIHost, LocationPath, URIPath, URIQuery, LocationQuery,
-			ProxyURI, ProxyScheme:
-			opval = string(b[:length])
-		}
-
-		option := option{
-			ID:    oid,
-			Value: opval,
-		}
+		opval := parseOptionValue(oid, b[:length])
 		b = b[length:]
-		prev = int(option.ID)
+		prev = int(oid)
 
-		m.opts = append(m.opts, option)
+		if opval != nil {
+			m.opts = append(m.opts, option{ID: oid, Value: opval})
+		}
 	}
 	m.Payload = b
 	return nil
