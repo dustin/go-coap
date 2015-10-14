@@ -37,7 +37,6 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 
 	rv := rh.ServeCOAP(l, u, &msg)
 	if rv != nil {
-		log.Printf("Transmitting %#v", rv)
 		Transmit(l, u, *rv)
 	}
 }
