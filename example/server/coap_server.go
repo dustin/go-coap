@@ -16,11 +16,12 @@ func main() {
 					Type:      coap.Acknowledgement,
 					Code:      coap.Content,
 					MessageID: m.MessageID,
+					Token:     m.Token,
 					Payload:   []byte("hello to you!"),
 				}
 				res.SetOption(coap.ContentFormat, coap.TextPlain)
-				res.SetOption(coap.LocationPath, m.Path())
 
+				log.Printf("Transmitting %#v", res)
 				return res
 			}
 			return nil
