@@ -49,6 +49,9 @@ func (c *Conn) Send(req Message) (*Message, error) {
 	}
 
 	rv, err := Receive(c.conn, c.buf)
+	if err != nil {
+		return nil, err
+	}
 
 	return &rv, nil
 }
@@ -56,5 +59,8 @@ func (c *Conn) Send(req Message) (*Message, error) {
 // Receive a message.
 func (c *Conn) Receive() (*Message, error) {
 	rv, err := Receive(c.conn, c.buf)
-	return &rv, err
+	if err != nil {
+		return nil, err
+	}
+	return &rv, nil
 }
