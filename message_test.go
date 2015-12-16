@@ -37,7 +37,7 @@ func assertEqualMessages(t *testing.T, e, a Message) {
 	} else {
 		for i, _ := range e.opts {
 			if e.opts[i].ID != a.opts[i].ID {
-				t.Errorf("Expected option ID %v, got %v", e.opts[i].ID != a.opts[i].ID)
+				t.Errorf("Expected option ID %v, got %v", e.opts[i].ID, a.opts[i].ID)
 				continue
 			}
 			switch e.opts[i].Value.(type) {
