@@ -404,6 +404,42 @@ func (m *Message) SetPath(s []string) {
 	m.SetOption(URIPath, s)
 }
 
+// Query gets the URI-Query option set on this message if any.
+func (m Message) Query() []string {
+	return m.optionStrings(URIQuery)
+}
+
+func (m Message) QueryParamValue(name string, separator string) (string, error) {
+	prefix := name + separator
+	for _, each := range m.Query() {
+		if strings.HasPrefix(each, prefix) {
+			return each[len(prefix):], nil
+			break
+		}
+	}
+	return "", errors.New(name + ": parameter is not found")
+}
+
+// QueryString assembles query options by joining with ampresand.
+// Question mark is not pre-pended.
+func (m Message) QueryString() string {
+	return strings.Join(m.Query(), "&")
+}
+
+// SetQueryString sets a query by a & separated string.
+// If query string starts with '?' character, '?' is ignored.
+func (m *Message) SetQueryString(s string) {
+	for s[0] == '?' {
+		s = s[1:]
+	}
+	m.SetQuery(strings.Split(s, "&"))
+}
+
+// SetPath updates or adds a URIPath attribute on this message.
+func (m *Message) SetQuery(s []string) {
+	m.SetOption(URIQuery, s)
+}
+
 // RemoveOption removes all references to an option
 func (m *Message) RemoveOption(opID OptionID) {
 	m.opts = m.opts.Minus(opID)
