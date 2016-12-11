@@ -29,7 +29,7 @@ func FuncHandler(f func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message) Ha
 func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 	rh Handler) {
 
-	msg, err := parseMessage(data)
+	msg, err := ParseMessage(data)
 	if err != nil {
 		log.Printf("Error parsing %v", err)
 		return
@@ -64,7 +64,7 @@ func Receive(l *net.UDPConn, buf []byte) (Message, error) {
 	if err != nil {
 		return Message{}, err
 	}
-	return parseMessage(buf[:nr])
+	return ParseMessage(buf[:nr])
 }
 
 // ListenAndServe binds to the given address and serve requests forever.

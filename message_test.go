@@ -246,7 +246,7 @@ func TestInvalidMessageParsing(t *testing.T) {
 	}
 
 	for _, data := range invalidPackets {
-		msg, err := parseMessage(data)
+		msg, err := ParseMessage(data)
 		if err == nil {
 			t.Errorf("Unexpected success parsing short message (%#v): %v", data, msg)
 		}
@@ -260,7 +260,7 @@ func TestOptionsWithIllegalLengthAreIgnoredDuringParsing(t *testing.T) {
 		MessageID: 0xabcd,
 		Payload:   []byte{},
 	}
-	msg, err := parseMessage([]byte{0x40, 0x01, 0xab, 0xcd,
+	msg, err := ParseMessage([]byte{0x40, 0x01, 0xab, 0xcd,
 		0x73, // URI-Port option (uint) with length 3 (valid lengths are 0-2)
 		0x11, 0x22, 0x33, 0xff})
 	if err != nil {
@@ -270,7 +270,7 @@ func TestOptionsWithIllegalLengthAreIgnoredDuringParsing(t *testing.T) {
 		t.Errorf("Expected\n%#v\ngot\n%#v", exp, msg)
 	}
 
-	msg, err = parseMessage([]byte{0x40, 0x01, 0xab, 0xcd,
+	msg, err = ParseMessage([]byte{0x40, 0x01, 0xab, 0xcd,
 		0xd5, 0x01, // Max-Age option (uint) with length 5 (valid lengths are 0-4)
 		0x11, 0x22, 0x33, 0x44, 0x55, 0xff})
 	if err != nil {
@@ -283,7 +283,7 @@ func TestOptionsWithIllegalLengthAreIgnoredDuringParsing(t *testing.T) {
 
 func TestDecodeMessageWithoutOptionsAndPayload(t *testing.T) {
 	input := []byte{0x40, 0x1, 0x30, 0x39}
-	msg, err := parseMessage(input)
+	msg, err := ParseMessage(input)
 	if err != nil {
 		t.Fatalf("Error parsing message: %v", err)
 	}
@@ -312,7 +312,7 @@ func TestDecodeMessageSmallWithPayload(t *testing.T) {
 		0xff, 'h', 'i',
 	}
 
-	msg, err := parseMessage(input)
+	msg, err := ParseMessage(input)
 	if err != nil {
 		t.Fatalf("Error parsing message: %v", err)
 	}
@@ -393,7 +393,7 @@ func TestEncodeSeveral(t *testing.T) {
 			t.Fail()
 			continue
 		}
-		m2, err := parseMessage(b)
+		m2, err := ParseMessage(b)
 		if err != nil {
 			t.Fatalf("Can't parse my own message at %#v: %v", p, err)
 		}
@@ -507,7 +507,7 @@ func TestDecodeLargePath(t *testing.T) {
 		0x5f, 0x62, 0x79, 0x74, 0x65, 0x73,
 	}
 
-	req, err := parseMessage(data)
+	req, err := ParseMessage(data)
 	if err != nil {
 		t.Fatalf("Error parsing request: %v", err)
 	}
@@ -535,7 +535,7 @@ func TestDecodeMessageSmaller(t *testing.T) {
 		0x65, 0x65, 0x74, 0x61, 0x67, 0xa1, 0x3,
 	}
 
-	req, err := parseMessage(data)
+	req, err := ParseMessage(data)
 	if err != nil {
 		t.Fatalf("Error parsing request: %v", err)
 	}
@@ -621,7 +621,7 @@ func TestExample1(t *testing.T) {
 	input := append([]byte{0x40, 1, 0x7d, 0x34,
 		(11 << 4) | 11}, []byte("temperature")...)
 
-	msg, err := parseMessage(input)
+	msg, err := ParseMessage(input)
 	if err != nil {
 		t.Fatalf("Error parsing message: %v", err)
 	}
@@ -661,7 +661,7 @@ func TestExample1Res(t *testing.T) {
 	input := append([]byte{0x60, 69, 0x7d, 0x34, 0xff},
 		[]byte("22.3 C")...)
 
-	msg, err := parseMessage(input)
+	msg, err := ParseMessage(input)
 	if err != nil {
 		t.Fatalf("Error parsing message: %v", err)
 	}
@@ -691,7 +691,7 @@ func TestIssue15(t *testing.T) {
 		0x72, 0x6b, 0x2f, 0x63, 0x63, 0x33, 0x30, 0x30, 0x30, 0x2d,
 		0x70, 0x61, 0x74, 0x63, 0x68, 0x2d, 0x76, 0x65, 0x72, 0x73,
 		0x69, 0x6f, 0x6e, 0xff, 0x31, 0x2e, 0x32, 0x38}
-	msg, err := parseMessage(input)
+	msg, err := ParseMessage(input)
 	if err != nil {
 		t.Fatalf("Error parsing message: %v", err)
 	}
@@ -714,7 +714,7 @@ func TestErrorOptionMarker(t *testing.T) {
 	input := []byte{0x53, 0x2, 0x7a, 0x23,
 		0x1, 0x2, 0x3, 0xbf, 0x01, 0x02, 0x03, 0x04, 0x05, 0x6, 0x7, 0x8, 0x9,
 		0xa, 0xb, 0xc, 0xe, 0xf, 0x10}
-	msg, err := parseMessage(input)
+	msg, err := ParseMessage(input)
 	if err == nil {
 		t.Errorf("Unexpected success parsing malformed option: %v", msg)
 	}
@@ -725,7 +725,7 @@ func TestDecodeContentFormatOptionToMediaType(t *testing.T) {
 		0x40, 0x1, 0x30, 0x39, 0xc1, 0x32, 0x51, 0x29,
 	}
 
-	parsedMsg, err := parseMessage(data)
+	parsedMsg, err := ParseMessage(data)
 	if err != nil {
 		t.Fatalf("Error parsing request: %v", err)
 	}
@@ -772,7 +772,7 @@ func TestEncodeMessageWithAllOptions(t *testing.T) {
 		t.Fatalf("Error encoding request: %v", err)
 	}
 
-	parsedMsg, err := parseMessage(data)
+	parsedMsg, err := ParseMessage(data)
 	if err != nil {
 		t.Fatalf("Error parsing binary packet: %v", err)
 	}

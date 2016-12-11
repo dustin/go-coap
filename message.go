@@ -546,7 +546,8 @@ func (m *Message) MarshalBinary() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func parseMessage(data []byte) (Message, error) {
+// ParseMessage extracts the Message from the given input.
+func ParseMessage(data []byte) (Message, error) {
 	rv := Message{}
 	return rv, rv.UnmarshalBinary(data)
 }
