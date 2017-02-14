@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/dustin/go-coap"
 )
@@ -15,9 +16,14 @@ func main() {
 		Payload:   []byte("hello, world!"),
 	}
 
+	path := "/some/path"
+	if len(os.Args) > 1 {
+		path = os.Args[1]
+	}
+
 	req.SetOption(coap.ETag, "weetag")
 	req.SetOption(coap.MaxAge, 3)
-	req.SetPathString("/some/path")
+	req.SetPathString(path)
 
 	c, err := coap.Dial("udp", "localhost:5683")
 	if err != nil {
