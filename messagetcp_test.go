@@ -2,18 +2,19 @@ package coap
 
 import (
 	"bytes"
-	"encoding/binary"
 	"testing"
 )
 
 func TestTCPDecodeMessageSmallWithPayload(t *testing.T) {
-	input := []byte{0, 0,
-		0x40, 0x1, 0x30, 0x39, 0x21, 0x3,
+	input := []byte{
+		13 << 4, // len=13, tkl=0
+		0x01,    // Extended Length
+		0x01,    // Code
+		0x30, 0x39, 0x21, 0x3,
 		0x26, 0x77, 0x65, 0x65, 0x74, 0x61, 0x67,
-		0xff, 'h', 'i',
+		0xff,
+		'h', 'i',
 	}
-
-	binary.BigEndian.PutUint16(input, uint16(len(input)-2))
 
 	msg, err := Decode(bytes.NewReader(input))
 	if err != nil {
@@ -25,9 +26,6 @@ func TestTCPDecodeMessageSmallWithPayload(t *testing.T) {
 	}
 	if msg.Code != GET {
 		t.Errorf("Expected message code GET, got %v", msg.Code)
-	}
-	if msg.MessageID != 12345 {
-		t.Errorf("Expected message ID 12345, got %v", msg.MessageID)
 	}
 
 	if !bytes.Equal(msg.Payload, []byte("hi")) {
