@@ -246,7 +246,8 @@ func PullTcp(data []byte) (*TcpMessage, []byte, error) {
 
 	// Determine the number of bytes read.  These bytes get trimmed from the
 	// front of the returned data slice.
-	sz, err := r.Seek(0, io.SeekCurrent)
+	// XXX: Replace "1" with io.SeekCurrent when go 1.7 becomes mainstream.
+	sz, err := r.Seek(0, 1)
 	if err != nil {
 		// This should never happen.
 		return nil, data, err
