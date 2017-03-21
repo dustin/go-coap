@@ -147,6 +147,8 @@ type OptionID uint8
    |  15 | x  | x | - | x | Uri-Query      | string | 0-255  | (none)  |
    |  17 | x  |   |   |   | Accept         | uint   | 0-2    | (none)  |
    |  20 |    |   |   | x | Location-Query | string | 0-255  | (none)  |
+   |  23 | x  | x |   |   | Block2         | uint   | 0-3    | (none)  |
+   |  27 | x  | x |   |   | Block1         | uint   | 0-3    | (none)  |
    |  35 | x  | x | - |   | Proxy-Uri      | string | 1-1034 | (none)  |
    |  39 | x  | x | - |   | Proxy-Scheme   | string | 1-255  | (none)  |
    |  60 |    |   | x |   | Size1          | uint   | 0-4    | (none)  |
@@ -168,6 +170,8 @@ const (
 	URIQuery      OptionID = 15
 	Accept        OptionID = 17
 	LocationQuery OptionID = 20
+	Block2        OptionID = 23
+	Block1        OptionID = 27
 	ProxyURI      OptionID = 35
 	ProxyScheme   OptionID = 39
 	Size1         OptionID = 60
@@ -210,7 +214,7 @@ var optionDefs = [256]optionDef{
 }
 
 // MediaType specifies the content type of a message.
-type MediaType byte
+type MediaType int
 
 // Content types.
 const (
