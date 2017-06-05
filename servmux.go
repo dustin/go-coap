@@ -78,10 +78,13 @@ func (mux *ServeMux) Handle(pattern string, handler Handler) {
 	}
 
 	if pattern == "" {
-		panic("http: invalid pattern " + pattern)
+		panic("coap: invalid pattern " + pattern)
 	}
 	if handler == nil {
-		panic("http: nil handler")
+		panic("coap: nil handler")
+	}
+	if _, ok := mux.m[pattern]; ok {
+		panic("coap: multiple registration for " + pattern)
 	}
 
 	mux.m[pattern] = muxEntry{h: handler, pattern: pattern}
