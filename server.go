@@ -57,8 +57,8 @@ func Transmit(l *net.UDPConn, a *net.UDPAddr, m Message) error {
 }
 
 // Receive a message.
-func Receive(l *net.UDPConn, buf []byte) (Message, error) {
-	l.SetReadDeadline(time.Now().Add(ResponseTimeout))
+func Receive(l *net.UDPConn, buf []byte, responseTimeout time.Duration) (Message, error) {
+	l.SetReadDeadline(time.Now().Add(responseTimeout))
 
 	nr, _, err := l.ReadFromUDP(buf)
 	if err != nil {

@@ -6,9 +6,9 @@ import (
 )
 
 const (
-	// ResponseTimeout is the amount of time to wait for a
+	// DefaultResponseTimeout is the amount of time to wait for a
 	// response.
-	ResponseTimeout = time.Second * 2
+	DefaultResponseTimeout = time.Second * 2
 	// ResponseRandomFactor is a multiplier for response backoff.
 	ResponseRandomFactor = 1.5
 	// MaxRetransmit is the maximum number of times a message will
@@ -18,12 +18,18 @@ const (
 
 // Conn is a CoAP client connection.
 type Conn struct {
-	conn *net.UDPConn
-	buf  []byte
+	conn            *net.UDPConn
+	buf             []byte
+	responseTimeout time.Duration
 }
 
 // Dial connects a CoAP client.
 func Dial(n, addr string) (*Conn, error) {
+	return DialWithTimeout(n, addr, DefaultResponseTimeout)
+}
+
+// DialWithTimeout provides control of response timeout.
+func DialWithTimeout(n, addr string, responseTimeout time.Duration) (*Conn, error) {
 	uaddr, err := net.ResolveUDPAddr(n, addr)
 	if err != nil {
 		return nil, err
@@ -34,7 +40,7 @@ func Dial(n, addr string) (*Conn, error) {
 		return nil, err
 	}
 
-	return &Conn{s, make([]byte, maxPktLen)}, nil
+	return &Conn{s, make([]byte, maxPktLen), responseTimeout}, nil
 }
 
 // Send a message.  Get a response if there is one.
@@ -48,7 +54,7 @@ func (c *Conn) Send(req Message) (*Message, error) {
 		return nil, nil
 	}
 
-	rv, err := Receive(c.conn, c.buf)
+	rv, err := Receive(c.conn, c.buf, c.responseTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +64,7 @@ func (c *Conn) Send(req Message) (*Message, error) {
 
 // Receive a message.
 func (c *Conn) Receive() (*Message, error) {
-	rv, err := Receive(c.conn, c.buf)
+	rv, err := Receive(c.conn, c.buf, c.responseTimeout)
 	if err != nil {
 		return nil, err
 	}
