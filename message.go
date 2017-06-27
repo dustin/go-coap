@@ -345,6 +345,23 @@ type Message struct {
 	opts options
 }
 
+// Clone creates a shallow copy of Message structure.
+// It is necessary, because opts are not exposed and replication of options
+// based on the given API is not a simple task.
+func (m Message) Clone() Message {
+	newOpts := make(options, len(m.opts))
+	copy(newOpts[:], m.opts)
+	return Message{
+		Type:      m.Type,
+		Code:      m.Code,
+		MessageID: m.MessageID,
+		Token:     m.Token,
+		Payload:   m.Payload,
+
+		opts: newOpts,
+	}
+}
+
 // IsConfirmable returns true if this message is confirmable.
 func (m Message) IsConfirmable() bool {
 	return m.Type == Confirmable

@@ -778,3 +778,33 @@ func TestEncodeMessageWithAllOptions(t *testing.T) {
 	}
 	assertEqualMessages(t, req, parsedMsg)
 }
+
+func TestClone(t *testing.T) {
+	m1 := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+		Token:     []byte("TOKEN"),
+		Payload:   []byte("PAYLOAD"),
+	}
+
+	m1.AddOption(IfMatch, []byte("IFMATCH"))
+	m1.AddOption(URIHost, "URIHOST")
+	m1.AddOption(ETag, []byte("ETAG"))
+
+	m2 := m1.Clone()
+	assertEqualMessages(t, m1, m2)
+
+	m2.Type = NonConfirmable
+	if m1.Type != Confirmable {
+		t.Error("m1.Type shall be Confirmable")
+	}
+
+	m2.AddOption(Size1, uint32(9999))
+	if len(m1.opts) != 3 {
+		t.Error("m1.opts shall be 3")
+	}
+	if len(m2.opts) != 4 {
+		t.Error("m2.opts shall be 4")
+	}
+}
