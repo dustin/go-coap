@@ -12,5 +12,6 @@ some preliminary work on `SUBSCRIBE` support from
 1. Added minor helper function to populate URI options.
 2. Added configurable receive timeout in backgwards compatible way.  Changed `ResponseTimeout` variable to `DefaultResponseTimeout` to emphasise its role change and to be able to track down its usage within package.
 3. Example programs package references have been changed from `dustin/go-coap` to `Kulak/go-coap`.
+4. Message can be cloned.
 
 Motivation for all this change: need to support existing application functionality.
