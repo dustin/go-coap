@@ -345,7 +345,7 @@ type Message struct {
 	opts options
 }
 
-// Clone creates a shallow copy of Message structure.
+// Clone creates a copy of Message structure.
 // It is necessary, because opts are not exposed and replication of options
 // based on the given API is not a simple task.
 func (m Message) Clone() Message {
