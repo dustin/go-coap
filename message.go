@@ -171,6 +171,9 @@ const (
 	ProxyURI      OptionID = 35
 	ProxyScheme   OptionID = 39
 	Size1         OptionID = 60
+	//https://tools.ietf.org/id/draft-bergmann-ace-dcaf-cose-00.html#rfc.section.5
+	Authorization OptionID = 64
+	AuthorizationFormat OptionID = 65
 )
 
 // Option value format (RFC7252 section 3.2)
@@ -207,6 +210,8 @@ var optionDefs = [256]optionDef{
 	ProxyURI:      optionDef{valueFormat: valueString, minLen: 1, maxLen: 1034},
 	ProxyScheme:   optionDef{valueFormat: valueString, minLen: 1, maxLen: 255},
 	Size1:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
+	Authorization:  optionDef{valueFormat: valueOpaque, minLen: 1, maxLen: 1034},
+	AuthorizationFormat: optionDef{valueFormat: valueUint, minLen: 0, maxLen: 2},
 }
 
 // MediaType specifies the content type of a message.
