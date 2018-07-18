@@ -405,6 +405,34 @@ func TestEncodeSeveral(t *testing.T) {
 	}
 }
 
+func TestEncodeManyQueries(t *testing.T) {
+	tests := map[string][]string{
+		"a":   []string{"a"},
+		"axe": []string{"axe"},
+		"a&b&c&d&e&f&h&g&i&j": []string{"a", "b", "c", "d", "e",
+			"f", "h", "g", "i", "j"},
+	}
+	for p, a := range tests {
+		m := &Message{Type: Confirmable, Code: GET, MessageID: 12345}
+		m.SetQueryString(p)
+		b, err := m.MarshalBinary()
+		if err != nil {
+			t.Errorf("Error encoding %#v", p)
+			t.Fail()
+			continue
+		}
+		m2, err := ParseMessage(b)
+		if err != nil {
+			t.Fatalf("Can't parse my own message at %#v: %v", p, err)
+		}
+
+		if !reflect.DeepEqual(m2.Query(), a) {
+			t.Errorf("Expected %#v, got %#v", a, m2.Path())
+			t.Fail()
+		}
+	}
+}
+
 func TestPathAsOption(t *testing.T) {
 	m := &Message{Type: Confirmable, Code: GET, MessageID: 12345}
 	m.SetOption(LocationPath, []string{"a", "b"})
