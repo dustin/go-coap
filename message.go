@@ -416,9 +416,6 @@ func (m Message) QueryString() string {
 
 // SetQueryString sets a query by an ampersand separated string.
 func (m *Message) SetQueryString(s string) {
-	for s[0] == '&' {
-		s = s[1:]
-	}
 	m.SetQuery(strings.Split(s, "&"))
 }
 
