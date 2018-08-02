@@ -168,6 +168,7 @@ const (
 	URIQuery      OptionID = 15
 	Accept        OptionID = 17
 	LocationQuery OptionID = 20
+	Block2        OptionID = 23
 	ProxyURI      OptionID = 35
 	ProxyScheme   OptionID = 39
 	Size1         OptionID = 60
@@ -204,6 +205,7 @@ var optionDefs = [256]optionDef{
 	URIQuery:      optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
 	Accept:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 2},
 	LocationQuery: optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
+	Block2:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 3},
 	ProxyURI:      optionDef{valueFormat: valueString, minLen: 1, maxLen: 1034},
 	ProxyScheme:   optionDef{valueFormat: valueString, minLen: 1, maxLen: 255},
 	Size1:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
@@ -339,6 +341,8 @@ type Message struct {
 	Type      COAPType
 	Code      COAPCode
 	MessageID uint16
+
+	Block2 *Block
 
 	Token, Payload []byte
 
@@ -635,7 +639,11 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 		if opval != nil {
 			m.opts = append(m.opts, option{ID: oid, Value: opval})
 		}
+
 	}
+
 	m.Payload = b
+	m.Block2 = ParseBlock(m.Options(Block2))
+
 	return nil
 }
