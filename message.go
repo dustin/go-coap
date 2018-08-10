@@ -24,6 +24,9 @@ const (
 	Reset COAPType = 3
 )
 
+// The range of 2048..64999 is for all other options (RFC7252 section 12.2)
+var vendorOptionRange = [...]OptionID{2048, 64999}
+
 var typeNames = [256]string{
 	Confirmable:     "Confirmable",
 	NonConfirmable:  "NonConfirmable",
@@ -127,7 +130,7 @@ var (
 )
 
 // OptionID identifies an option in a message.
-type OptionID uint8
+type OptionID uint16
 
 /*
    +-----+----+---+---+---+----------------+--------+--------+---------+
@@ -283,6 +286,11 @@ func (o option) toBytes() []byte {
 }
 
 func parseOptionValue(optionID OptionID, valueBuf []byte) interface{} {
+	// Private or vendor-specific options (RFC7252 section 12.2)
+	if optionID >= vendorOptionRange[0] && optionID <= vendorOptionRange[1] {
+		return valueBuf
+	}
+
 	def := optionDefs[optionID]
 	if def.valueFormat == valueUnknown {
 		// Skip unrecognized options (RFC7252 section 5.4.1)
@@ -375,6 +383,19 @@ func (m Message) Option(o OptionID) interface{} {
 		}
 	}
 	return nil
+}
+
+// VendorOptions gets all vendor specific options
+func (m Message) VendorOptions() []interface{} {
+	options := []interface{}{}
+
+	for _, o := range m.opts {
+		if o.ID >= vendorOptionRange[0] && o.ID <= vendorOptionRange[1] {
+			options = append(options, m.Option(o.ID))
+		}
+	}
+
+	return options
 }
 
 func (m Message) optionStrings(o OptionID) []string {
