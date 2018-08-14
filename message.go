@@ -172,6 +172,7 @@ const (
 	Accept        OptionID = 17
 	LocationQuery OptionID = 20
 	Block2        OptionID = 23
+	Size2         OptionID = 28
 	ProxyURI      OptionID = 35
 	ProxyScheme   OptionID = 39
 	Size1         OptionID = 60
@@ -209,6 +210,7 @@ var optionDefs = [256]optionDef{
 	Accept:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 2},
 	LocationQuery: optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
 	Block2:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 3},
+	Size2:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
 	ProxyURI:      optionDef{valueFormat: valueString, minLen: 1, maxLen: 1034},
 	ProxyScheme:   optionDef{valueFormat: valueString, minLen: 1, maxLen: 255},
 	Size1:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
