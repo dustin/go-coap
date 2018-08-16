@@ -7,9 +7,9 @@ import (
 
 func TestBlockMarshalAndUnmarshal(t *testing.T) {
 	block := &Block{
-		num:  4096 * 1024,
-		more: true,
-		size: 1024,
+		Num:  4096 * 1024,
+		More: true,
+		Size: 1024,
 	}
 
 	b := ParseBlock([]interface{}{block.MarshalBinary()})

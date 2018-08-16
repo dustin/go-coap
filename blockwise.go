@@ -8,29 +8,20 @@ import (
 
 // Block represents a block in a block-wise transfer
 type Block struct {
-	more bool
-	num  uint32
-	size uint32
-}
-
-func (b *Block) Num() uint32 {
-	return b.num
-}
-
-func (b *Block) Size() uint32 {
-	return b.size
-}
-
-func (b *Block) Offset() uint32 {
-	return b.num * b.size
+	// More flag
+	More bool
+	// Block number
+	Num uint32
+	// Block size
+	Size uint32
 }
 
 // MarshalBinary produces the binary form of this Block
 func (b *Block) MarshalBinary() uint32 {
-	value := b.num << 4
-	value |= uint32((math.Log(float64(b.size)) / math.Log(2)) - 4)
+	value := b.Num << 4
+	value |= uint32((math.Log(float64(b.Size)) / math.Log(2)) - 4)
 
-	if b.more {
+	if b.More {
 		value |= 0x8
 	}
 
@@ -47,13 +38,13 @@ func ParseBlock(data []interface{}) *Block {
 	}
 
 	b := &Block{
-		more: false,
-		num:  data[0].(uint32) >> 4,
-		size: uint32(math.Pow(2, float64((data[0].(uint32)&0x07)+4))),
+		More: false,
+		Num:  data[0].(uint32) >> 4,
+		Size: uint32(math.Pow(2, float64((data[0].(uint32)&0x07)+4))),
 	}
 
 	if data[0].(uint32)&(0x01<<3) > 0 {
-		b.more = true
+		b.More = true
 	}
 
 	return b

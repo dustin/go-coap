@@ -38,9 +38,9 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 
 	if msg.Block2 == nil {
 		msg.Block2 = &Block{
-			num:  0,
-			more: false,
-			size: 1024,
+			Num:  0,
+			More: false,
+			Size: 1024,
 		}
 	}
 
@@ -52,19 +52,19 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 		size2 := rv.Option(Size2)
 
 		if size2 != nil && len(header)+int(size2.(uint32))+1 > maxPktLen {
-			count := math.Floor(float64(size2.(uint32)) / float64(msg.Block2.size))
+			count := math.Floor(float64(size2.(uint32)) / float64(msg.Block2.Size))
 
 			var more bool
-			if float64(msg.Block2.num) < count {
+			if float64(msg.Block2.Num) < count {
 				more = true
-			} else if float64(msg.Block2.num) == count {
+			} else if float64(msg.Block2.Num) == count {
 				more = false
 			}
 
 			rv.Block2 = &Block{
-				num:  msg.Block2.num,
-				more: more,
-				size: msg.Block2.size,
+				Num:  msg.Block2.Num,
+				More: more,
+				Size: msg.Block2.Size,
 			}
 
 			rv.AddOption(Block2, rv.Block2.MarshalBinary())

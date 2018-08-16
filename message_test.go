@@ -746,7 +746,7 @@ func TestEncodeMessageWithBlock2(t *testing.T) {
 		Type:      Confirmable,
 		Code:      GET,
 		MessageID: 12345,
-		Block2:    &Block{num: 1, more: true, size: 512},
+		Block2:    &Block{Num: 1, More: true, Size: 512},
 	}
 	req.AddOption(Block2, req.Block2.MarshalBinary())
 
@@ -789,7 +789,7 @@ func TestEncodeMessageWithAllOptions(t *testing.T) {
 	req.AddOption(ProxyURI, "PROXYURI")
 	req.AddOption(ProxyScheme, "PROXYSCHEME")
 	req.AddOption(Size1, uint32(9999))
-	req.AddOption(Block2, (&Block{num: 1, more: true, size: 32}).MarshalBinary())
+	req.AddOption(Block2, (&Block{Num: 1, More: true, Size: 32}).MarshalBinary())
 
 	data, err := req.MarshalBinary()
 	if err != nil {
