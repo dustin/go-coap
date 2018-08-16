@@ -13,6 +13,18 @@ type Block struct {
 	size uint32
 }
 
+func (b *Block) Num() uint32 {
+	return b.num
+}
+
+func (b *Block) Size() uint32 {
+	return b.size
+}
+
+func (b *Block) Offset() uint32 {
+	return b.num * b.size
+}
+
 // MarshalBinary produces the binary form of this Block
 func (b *Block) MarshalBinary() uint32 {
 	value := b.num << 4
