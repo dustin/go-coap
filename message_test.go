@@ -741,6 +741,29 @@ func TestDecodeContentFormatOptionToMediaType(t *testing.T) {
 	}
 }
 
+func TestEncodeMessageWithBlock2(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+		Block2:    &Block{Num: 1, More: true, Size: 512},
+	}
+	req.AddOption(Block2, req.Block2.MarshalBinary())
+
+	data, err := req.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	// Inspected by hand.
+	exp := []byte{
+		0x40, 0x1, 0x30, 0x39, 0xd1, 0xa, 0x1d,
+	}
+	if !reflect.DeepEqual(exp, data) {
+		t.Fatalf("Expected\n%#v\ngot\n%#v", exp, data)
+	}
+}
+
 func TestEncodeMessageWithAllOptions(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
@@ -766,6 +789,7 @@ func TestEncodeMessageWithAllOptions(t *testing.T) {
 	req.AddOption(ProxyURI, "PROXYURI")
 	req.AddOption(ProxyScheme, "PROXYSCHEME")
 	req.AddOption(Size1, uint32(9999))
+	req.AddOption(Block2, (&Block{Num: 1, More: true, Size: 32}).MarshalBinary())
 
 	data, err := req.MarshalBinary()
 	if err != nil {

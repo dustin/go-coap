@@ -24,6 +24,9 @@ const (
 	Reset COAPType = 3
 )
 
+// The range of 2048..64999 is for all other options (RFC7252 section 12.2)
+var vendorOptionRange = [...]OptionID{2048, 64999}
+
 var typeNames = [256]string{
 	Confirmable:     "Confirmable",
 	NonConfirmable:  "NonConfirmable",
@@ -127,7 +130,7 @@ var (
 )
 
 // OptionID identifies an option in a message.
-type OptionID uint8
+type OptionID uint16
 
 /*
    +-----+----+---+---+---+----------------+--------+--------+---------+
@@ -168,6 +171,8 @@ const (
 	URIQuery      OptionID = 15
 	Accept        OptionID = 17
 	LocationQuery OptionID = 20
+	Block2        OptionID = 23
+	Size2         OptionID = 28
 	ProxyURI      OptionID = 35
 	ProxyScheme   OptionID = 39
 	Size1         OptionID = 60
@@ -204,6 +209,8 @@ var optionDefs = [256]optionDef{
 	URIQuery:      optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
 	Accept:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 2},
 	LocationQuery: optionDef{valueFormat: valueString, minLen: 0, maxLen: 255},
+	Block2:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 3},
+	Size2:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
 	ProxyURI:      optionDef{valueFormat: valueString, minLen: 1, maxLen: 1034},
 	ProxyScheme:   optionDef{valueFormat: valueString, minLen: 1, maxLen: 255},
 	Size1:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
@@ -281,6 +288,11 @@ func (o option) toBytes() []byte {
 }
 
 func parseOptionValue(optionID OptionID, valueBuf []byte) interface{} {
+	// Private or vendor-specific options (RFC7252 section 12.2)
+	if optionID >= vendorOptionRange[0] && optionID <= vendorOptionRange[1] {
+		return valueBuf
+	}
+
 	def := optionDefs[optionID]
 	if def.valueFormat == valueUnknown {
 		// Skip unrecognized options (RFC7252 section 5.4.1)
@@ -340,6 +352,8 @@ type Message struct {
 	Code      COAPCode
 	MessageID uint16
 
+	Block2 *Block
+
 	Token, Payload []byte
 
 	opts options
@@ -371,6 +385,19 @@ func (m Message) Option(o OptionID) interface{} {
 		}
 	}
 	return nil
+}
+
+// VendorOptions gets all vendor specific options
+func (m Message) VendorOptions() []interface{} {
+	options := []interface{}{}
+
+	for _, o := range m.opts {
+		if o.ID >= vendorOptionRange[0] && o.ID <= vendorOptionRange[1] {
+			options = append(options, m.Option(o.ID))
+		}
+	}
+
+	return options
 }
 
 func (m Message) optionStrings(o OptionID) []string {
@@ -635,7 +662,11 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 		if opval != nil {
 			m.opts = append(m.opts, option{ID: oid, Value: opval})
 		}
+
 	}
+
 	m.Payload = b
+	m.Block2 = ParseBlock(m.Options(Block2))
+
 	return nil
 }

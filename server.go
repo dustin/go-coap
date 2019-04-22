@@ -3,6 +3,7 @@ package coap
 
 import (
 	"log"
+	"math"
 	"net"
 	"time"
 )
@@ -35,8 +36,40 @@ func handlePacket(l *net.UDPConn, data []byte, u *net.UDPAddr,
 		return
 	}
 
+	if msg.Block2 == nil {
+		msg.Block2 = &Block{
+			Num:  0,
+			More: false,
+			Size: 1024,
+		}
+	}
+
 	rv := rh.ServeCOAP(l, u, &msg)
+
 	if rv != nil {
+		header, _ := rv.MarshalBinary()
+
+		size2 := rv.Option(Size2)
+
+		if size2 != nil && len(header)+int(size2.(uint32))+1 > maxPktLen {
+			count := math.Floor(float64(size2.(uint32)) / float64(msg.Block2.Size))
+
+			var more bool
+			if float64(msg.Block2.Num) < count {
+				more = true
+			} else if float64(msg.Block2.Num) == count {
+				more = false
+			}
+
+			rv.Block2 = &Block{
+				Num:  msg.Block2.Num,
+				More: more,
+				Size: msg.Block2.Size,
+			}
+
+			rv.AddOption(Block2, rv.Block2.MarshalBinary())
+		}
+
 		Transmit(l, u, *rv)
 	}
 }
