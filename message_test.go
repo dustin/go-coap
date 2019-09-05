@@ -76,6 +76,7 @@ func TestOptionToBytes(t *testing.T) {
 		{"x", []byte{'x'}},
 		{[]byte{'x'}, []byte{'x'}},
 		{MediaType(3), []byte{0x3}},
+		{MediaType(11050), []byte{0x2b, 0x2a}},
 		{3, []byte{0x3}},
 		{838, []byte{0x3, 0x46}},
 		{int32(838), []byte{0x3, 0x46}},
@@ -734,6 +735,33 @@ func TestDecodeContentFormatOptionToMediaType(t *testing.T) {
 	actualContentFormatType := fmt.Sprintf("%T", parsedMsg.Option(ContentFormat))
 	if expected != actualContentFormatType {
 		t.Fatalf("Expected %#v got %#v", expected, actualContentFormatType)
+	}
+	actualAcceptType := fmt.Sprintf("%T", parsedMsg.Option(Accept))
+	if expected != actualAcceptType {
+		t.Fatalf("Expected %#v got %#v", expected, actualAcceptType)
+	}
+}
+
+// Decode ContentFormat option where the value is >255
+func TestDecodeContentFormatOptionToMediaTypeLarge(t *testing.T) {
+	data := []byte{
+		0x40, 0x1, 0x30, 0x39, 0xc2, 0x2b, 0x2a, 0x51, 0x29,
+	}
+
+	parsedMsg, err := ParseMessage(data)
+	if err != nil {
+		t.Fatalf("Error parsing request: %v", err)
+	}
+
+	expected := "coap.MediaType"
+	expectedValue := MediaType(11050)
+	actualContentFormatTypeValue := parsedMsg.Option(ContentFormat).(MediaType)
+	actualContentFormatType := fmt.Sprintf("%T", actualContentFormatTypeValue)
+	if expected != actualContentFormatType {
+		t.Fatalf("Expected %#v got %#v", expected, actualContentFormatType)
+	}
+	if expectedValue != actualContentFormatTypeValue {
+		t.Fatalf("Expected %v got %v", expectedValue, actualContentFormatTypeValue)
 	}
 	actualAcceptType := fmt.Sprintf("%T", parsedMsg.Option(Accept))
 	if expected != actualAcceptType {
