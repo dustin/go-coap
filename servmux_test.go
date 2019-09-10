@@ -18,6 +18,10 @@ func TestPathMatching(t *testing.T) {
 		msgs["b"]++
 		return nil
 	})
+	m.HandleFunc("/", func(l *net.UDPConn, a *net.UDPAddr, m *Message) *Message {
+		msgs[""]++
+		return nil
+	})
 
 	msg := &Message{}
 	msg.SetPathString("/a")
@@ -31,12 +35,18 @@ func TestPathMatching(t *testing.T) {
 	msg.Type = NonConfirmable
 	msg.SetPathString("/c")
 	m.ServeCOAP(nil, nil, msg)
+	msg.SetPathString("/")
+	m.ServeCOAP(nil, nil, msg)
+	m.ServeCOAP(nil, nil, msg)
 
 	if msgs["a"] != 2 {
 		t.Errorf("Expected 2 messages for /a, got %v", msgs["a"])
 	}
 	if msgs["b"] != 1 {
 		t.Errorf("Expected 1 message for /b, got %v", msgs["b"])
+	}
+	if msgs[""] != 2 {
+		t.Errorf("Expected 2 message for /, got %v", msgs[""])
 	}
 }
 
@@ -45,7 +55,8 @@ func TestPathMatch(t *testing.T) {
 		pattern, path string
 		exp           bool
 	}{
-		{"", "", false},
+		{"", "", true},
+		{"/", "/", true},
 		{"/a/b/c", "/a/b/c", true},
 		{"/a/b/c", "/a/b/c/d", false},
 		{"/a/b/c/", "/a/b/c/d", true},

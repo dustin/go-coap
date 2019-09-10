@@ -21,6 +21,9 @@ func NewServeMux() *ServeMux { return &ServeMux{m: make(map[string]muxEntry)} }
 // Does path match pattern?
 func pathMatch(pattern, path string) bool {
 	if len(pattern) == 0 {
+		if pattern == path {
+			return true
+		}
 		// should not happen
 		return false
 	}
@@ -77,9 +80,6 @@ func (mux *ServeMux) Handle(pattern string, handler Handler) {
 		pattern = pattern[1:]
 	}
 
-	if pattern == "" {
-		panic("http: invalid pattern " + pattern)
-	}
 	if handler == nil {
 		panic("http: nil handler")
 	}
