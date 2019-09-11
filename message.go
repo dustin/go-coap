@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"sort"
 	"strings"
@@ -436,33 +437,7 @@ const (
 	extoptError      = 15
 )
 
-// MarshalBinary produces the binary form of this Message.
-func (m *Message) MarshalBinary() ([]byte, error) {
-	tmpbuf := []byte{0, 0}
-	binary.BigEndian.PutUint16(tmpbuf, m.MessageID)
-
-	/*
-	     0                   1                   2                   3
-	    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |Ver| T |  TKL  |      Code     |          Message ID           |
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |   Token (if any, TKL bytes) ...
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |   Options (if any) ...
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	   |1 1 1 1 1 1 1 1|    Payload (if any) ...
-	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-	*/
-
-	buf := bytes.Buffer{}
-	buf.Write([]byte{
-		(1 << 6) | (uint8(m.Type) << 4) | uint8(0xf&len(m.Token)),
-		byte(m.Code),
-		tmpbuf[0], tmpbuf[1],
-	})
-	buf.Write(m.Token)
-
+func writeOpt(o option, buf io.Writer, delta int) {
 	/*
 	     0   1   2   3   4   5   6   7
 	   +---------------+---------------+
@@ -509,13 +484,13 @@ func (m *Message) MarshalBinary() ([]byte, error) {
 		d, dx := extendOpt(delta)
 		l, lx := extendOpt(length)
 
-		buf.WriteByte(byte(d<<4) | byte(l))
+		buf.Write([]byte{byte(d<<4) | byte(l)})
 
 		tmp := []byte{0, 0}
 		writeExt := func(opt, ext int) {
 			switch opt {
 			case extoptByteCode:
-				buf.WriteByte(byte(ext))
+				buf.Write([]byte{byte(ext)})
 			case extoptWordCode:
 				binary.BigEndian.PutUint16(tmp, uint16(ext))
 				buf.Write(tmp)
@@ -526,16 +501,48 @@ func (m *Message) MarshalBinary() ([]byte, error) {
 		writeExt(l, lx)
 	}
 
-	sort.Stable(&m.opts)
+	b := o.toBytes()
+	writeOptHeader(delta, len(b))
+	buf.Write(b)
+}
 
+func writeOpts(buf io.Writer, opts options) {
 	prev := 0
-
-	for _, o := range m.opts {
-		b := o.toBytes()
-		writeOptHeader(int(o.ID)-prev, len(b))
-		buf.Write(b)
+	for _, o := range opts {
+		writeOpt(o, buf, int(o.ID)-prev)
 		prev = int(o.ID)
 	}
+}
+
+// MarshalBinary produces the binary form of this Message.
+func (m *Message) MarshalBinary() ([]byte, error) {
+	tmpbuf := []byte{0, 0}
+	binary.BigEndian.PutUint16(tmpbuf, m.MessageID)
+
+	/*
+	     0                   1                   2                   3
+	    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |Ver| T |  TKL  |      Code     |          Message ID           |
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |   Token (if any, TKL bytes) ...
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |   Options (if any) ...
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	   |1 1 1 1 1 1 1 1|    Payload (if any) ...
+	   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+	*/
+
+	buf := bytes.Buffer{}
+	buf.Write([]byte{
+		(1 << 6) | (uint8(m.Type) << 4) | uint8(0xf&len(m.Token)),
+		byte(m.Code),
+		tmpbuf[0], tmpbuf[1],
+	})
+	buf.Write(m.Token)
+
+	sort.Stable(&m.opts)
+	writeOpts(&buf, m.opts)
 
 	if len(m.Payload) > 0 {
 		buf.Write([]byte{0xff})
@@ -550,6 +557,74 @@ func (m *Message) MarshalBinary() ([]byte, error) {
 func ParseMessage(data []byte) (Message, error) {
 	rv := Message{}
 	return rv, rv.UnmarshalBinary(data)
+}
+
+// parseBody extracts the options and payload from a byte slice.  The supplied
+// byte slice contains everything following the message header (everything
+// after the token).
+func parseBody(data []byte) (options, []byte, error) {
+	prev := 0
+
+	parseExtOpt := func(opt int) (int, error) {
+		switch opt {
+		case extoptByteCode:
+			if len(data) < 1 {
+				return -1, errors.New("truncated")
+			}
+			opt = int(data[0]) + extoptByteAddend
+			data = data[1:]
+		case extoptWordCode:
+			if len(data) < 2 {
+				return -1, errors.New("truncated")
+			}
+			opt = int(binary.BigEndian.Uint16(data[:2])) + extoptWordAddend
+			data = data[2:]
+		}
+		return opt, nil
+	}
+
+	var opts options
+
+	for len(data) > 0 {
+		if data[0] == 0xff {
+			data = data[1:]
+			break
+		}
+
+		delta := int(data[0] >> 4)
+		length := int(data[0] & 0x0f)
+
+		if delta == extoptError || length == extoptError {
+			return nil, nil, errors.New("unexpected extended option marker")
+		}
+
+		data = data[1:]
+
+		delta, err := parseExtOpt(delta)
+		if err != nil {
+			return nil, nil, err
+		}
+		length, err = parseExtOpt(length)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		if len(data) < length {
+			return nil, nil, errors.New("truncated")
+		}
+
+		oid := OptionID(prev + delta)
+		opval := parseOptionValue(oid, data[:length])
+		data = data[length:]
+		prev = int(oid)
+
+		if opval != nil {
+			opt := option{ID: oid, Value: opval}
+			opts = append(opts, opt)
+		}
+	}
+
+	return opts, data, nil
 }
 
 // UnmarshalBinary parses the given binary slice as a Message.
@@ -579,63 +654,14 @@ func (m *Message) UnmarshalBinary(data []byte) error {
 	}
 	copy(m.Token, data[4:4+tokenLen])
 	b := data[4+tokenLen:]
-	prev := 0
 
-	parseExtOpt := func(opt int) (int, error) {
-		switch opt {
-		case extoptByteCode:
-			if len(b) < 1 {
-				return -1, errors.New("truncated")
-			}
-			opt = int(b[0]) + extoptByteAddend
-			b = b[1:]
-		case extoptWordCode:
-			if len(b) < 2 {
-				return -1, errors.New("truncated")
-			}
-			opt = int(binary.BigEndian.Uint16(b[:2])) + extoptWordAddend
-			b = b[2:]
-		}
-		return opt, nil
+	o, p, err := parseBody(b)
+	if err != nil {
+		return err
 	}
 
-	for len(b) > 0 {
-		if b[0] == 0xff {
-			b = b[1:]
-			break
-		}
+	m.Payload = p
+	m.opts = o
 
-		delta := int(b[0] >> 4)
-		length := int(b[0] & 0x0f)
-
-		if delta == extoptError || length == extoptError {
-			return errors.New("unexpected extended option marker")
-		}
-
-		b = b[1:]
-
-		delta, err := parseExtOpt(delta)
-		if err != nil {
-			return err
-		}
-		length, err = parseExtOpt(length)
-		if err != nil {
-			return err
-		}
-
-		if len(b) < length {
-			return errors.New("truncated")
-		}
-
-		oid := OptionID(prev + delta)
-		opval := parseOptionValue(oid, b[:length])
-		b = b[length:]
-		prev = int(oid)
-
-		if opval != nil {
-			m.opts = append(m.opts, option{ID: oid, Value: opval})
-		}
-	}
-	m.Payload = b
 	return nil
 }
