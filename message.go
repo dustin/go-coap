@@ -173,6 +173,11 @@ const (
 	Size1         OptionID = 60
 )
 
+// Block-Wise Transfer Option IDs (RFC7959 section 6.).
+const (
+	Block2 OptionID = 23
+)
+
 // Option value format (RFC7252 section 3.2)
 type valueFormat uint8
 
@@ -207,6 +212,7 @@ var optionDefs = [256]optionDef{
 	ProxyURI:      optionDef{valueFormat: valueString, minLen: 1, maxLen: 1034},
 	ProxyScheme:   optionDef{valueFormat: valueString, minLen: 1, maxLen: 255},
 	Size1:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
+	Block2:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 3},
 }
 
 // MediaType specifies the content type of a message.
@@ -348,6 +354,36 @@ type Message struct {
 // IsConfirmable returns true if this message is confirmable.
 func (m Message) IsConfirmable() bool {
 	return m.Type == Confirmable
+}
+
+// IsBlock2 returns true if this message contains Block2 option.
+func (m Message) IsBlock2() bool {
+	_, ok := m.Option(Block2).(uint32)
+	return ok
+}
+
+// Block2 returns a block number and size of the block requested.
+func (m Message) Block2() (uint32, uint32, bool) {
+	val, ok := m.Option(Block2).(uint32)
+	if !ok {
+		return 0, 0, false
+	}
+	num := val / 16
+	szx := (val & 7) + 4
+	more := false
+	if val&8 > 0 {
+		more = true
+	}
+	return num, szx, more
+}
+
+// SetBlock2 sets Block2 option.
+func (m *Message) SetBlock2(num, szx uint32, more bool) {
+	val := (num * 16) | (szx - 4)
+	if more {
+		val |= 8
+	}
+	m.SetOption(Block2, val)
 }
 
 // Options gets all the values for the given option.

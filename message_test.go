@@ -806,3 +806,52 @@ func TestEncodeMessageWithAllOptions(t *testing.T) {
 	}
 	assertEqualMessages(t, req, parsedMsg)
 }
+
+func TestEncodeMessageWithBlock2(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+
+	if req.IsBlock2() {
+		t.Fatalf("Error Block2 FOUND in request")
+	}
+
+	blockNum := uint32(0)
+	blockSzx := uint32(10)
+	blockMore := false
+
+	req.SetBlock2(blockNum, blockSzx, blockMore)
+
+	if !req.IsBlock2() {
+		t.Fatalf("Error Block2 NOT FOUND in request")
+	}
+
+	data, err := req.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	res, err := ParseMessage(data)
+	if err != nil {
+		t.Fatalf("Error parsing binary packet: %v", err)
+	}
+	assertEqualMessages(t, req, res)
+
+	if !res.IsBlock2() {
+		t.Fatalf("Error Block2 NOT FOUND in response")
+	}
+
+	resBlockNum, resBlockSzx, resBlockMore := res.Block2()
+
+	if resBlockNum != blockNum {
+		t.Fatalf("Error block NUM %d != %d", blockNum, resBlockNum)
+	}
+	if resBlockSzx != blockSzx {
+		t.Fatalf("Error block SZX %d != %d", blockSzx, resBlockSzx)
+	}
+	if resBlockMore != blockMore {
+		t.Fatalf("Error block more %v != %v", blockMore, resBlockMore)
+	}
+}
