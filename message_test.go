@@ -807,6 +807,55 @@ func TestEncodeMessageWithAllOptions(t *testing.T) {
 	assertEqualMessages(t, req, parsedMsg)
 }
 
+func TestEncodeMessageWithBlock1(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+
+	if req.IsBlock1() {
+		t.Fatalf("Error Block1 FOUND in request")
+	}
+
+	blockNum := uint32(0)
+	blockSzx := uint32(10)
+	blockMore := true
+
+	req.SetBlock1(blockNum, blockSzx, blockMore)
+
+	if !req.IsBlock1() {
+		t.Fatalf("Error Block1 NOT FOUND in request")
+	}
+
+	data, err := req.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	res, err := ParseMessage(data)
+	if err != nil {
+		t.Fatalf("Error parsing binary packet: %v", err)
+	}
+	assertEqualMessages(t, req, res)
+
+	if !res.IsBlock1() {
+		t.Fatalf("Error Block1 NOT FOUND in response")
+	}
+
+	resBlockNum, resBlockSzx, resBlockMore := res.Block1()
+
+	if resBlockNum != blockNum {
+		t.Fatalf("Error block NUM %d != %d", blockNum, resBlockNum)
+	}
+	if resBlockSzx != blockSzx {
+		t.Fatalf("Error block SZX %d != %d", blockSzx, resBlockSzx)
+	}
+	if resBlockMore != blockMore {
+		t.Fatalf("Error block more %v != %v", blockMore, resBlockMore)
+	}
+}
+
 func TestEncodeMessageWithBlock2(t *testing.T) {
 	req := Message{
 		Type:      Confirmable,
@@ -853,5 +902,82 @@ func TestEncodeMessageWithBlock2(t *testing.T) {
 	}
 	if resBlockMore != blockMore {
 		t.Fatalf("Error block more %v != %v", blockMore, resBlockMore)
+	}
+}
+
+func TestEncodeMessageWithBlockOptions(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+
+	if req.IsBlock1() {
+		t.Fatalf("Error Block1 FOUND in request")
+	}
+	if req.IsBlock2() {
+		t.Fatalf("Error Block2 FOUND in request")
+	}
+
+	block1Num := uint32(0)
+	block1Szx := uint32(10)
+	block1More := true
+
+	req.SetBlock1(block1Num, block1Szx, block1More)
+
+	if !req.IsBlock1() {
+		t.Fatalf("Error Block1 NOT FOUND in request")
+	}
+
+	block2Num := uint32(0)
+	block2Szx := uint32(10)
+	block2More := false
+
+	req.SetBlock2(block2Num, block2Szx, block2More)
+
+	if !req.IsBlock2() {
+		t.Fatalf("Error Block2 NOT FOUND in request")
+	}
+
+	data, err := req.MarshalBinary()
+	if err != nil {
+		t.Fatalf("Error encoding request: %v", err)
+	}
+
+	res, err := ParseMessage(data)
+	if err != nil {
+		t.Fatalf("Error parsing binary packet: %v", err)
+	}
+	assertEqualMessages(t, req, res)
+
+	if !res.IsBlock1() {
+		t.Fatalf("Error Block1 NOT FOUND in response")
+	}
+	if !res.IsBlock2() {
+		t.Fatalf("Error Block2 NOT FOUND in response")
+	}
+
+	resBlock1Num, resBlock1Szx, resBlock1More := res.Block1()
+
+	if resBlock1Num != block1Num {
+		t.Fatalf("Error block1 NUM %d != %d", block1Num, resBlock1Num)
+	}
+	if resBlock1Szx != block1Szx {
+		t.Fatalf("Error block1 SZX %d != %d", block1Szx, resBlock1Szx)
+	}
+	if resBlock1More != block1More {
+		t.Fatalf("Error block1 more %v != %v", block1More, resBlock1More)
+	}
+
+	resBlock2Num, resBlock2Szx, resBlock2More := res.Block2()
+
+	if resBlock2Num != block2Num {
+		t.Fatalf("Error block2 NUM %d != %d", block2Num, resBlock2Num)
+	}
+	if resBlock2Szx != block2Szx {
+		t.Fatalf("Error block2 SZX %d != %d", block2Szx, resBlock2Szx)
+	}
+	if resBlock2More != block2More {
+		t.Fatalf("Error block2 more %v != %v", block2More, resBlock2More)
 	}
 }
