@@ -79,32 +79,40 @@ const (
 	ProxyingNotSupported  COAPCode = 165
 )
 
+// Response Codes for Block-Wise Transfer in CoAP (RFC 7959)
+const (
+	Continue                COAPCode = 95
+	RequestEntityIncomplete COAPCode = 136
+)
+
 var codeNames = [256]string{
-	GET:                   "GET",
-	POST:                  "POST",
-	PUT:                   "PUT",
-	DELETE:                "DELETE",
-	Created:               "Created",
-	Deleted:               "Deleted",
-	Valid:                 "Valid",
-	Changed:               "Changed",
-	Content:               "Content",
-	BadRequest:            "BadRequest",
-	Unauthorized:          "Unauthorized",
-	BadOption:             "BadOption",
-	Forbidden:             "Forbidden",
-	NotFound:              "NotFound",
-	MethodNotAllowed:      "MethodNotAllowed",
-	NotAcceptable:         "NotAcceptable",
-	PreconditionFailed:    "PreconditionFailed",
-	RequestEntityTooLarge: "RequestEntityTooLarge",
-	UnsupportedMediaType:  "UnsupportedMediaType",
-	InternalServerError:   "InternalServerError",
-	NotImplemented:        "NotImplemented",
-	BadGateway:            "BadGateway",
-	ServiceUnavailable:    "ServiceUnavailable",
-	GatewayTimeout:        "GatewayTimeout",
-	ProxyingNotSupported:  "ProxyingNotSupported",
+	GET:                     "GET",
+	POST:                    "POST",
+	PUT:                     "PUT",
+	DELETE:                  "DELETE",
+	Created:                 "Created",
+	Deleted:                 "Deleted",
+	Valid:                   "Valid",
+	Changed:                 "Changed",
+	Content:                 "Content",
+	BadRequest:              "BadRequest",
+	Unauthorized:            "Unauthorized",
+	BadOption:               "BadOption",
+	Forbidden:               "Forbidden",
+	NotFound:                "NotFound",
+	MethodNotAllowed:        "MethodNotAllowed",
+	NotAcceptable:           "NotAcceptable",
+	PreconditionFailed:      "PreconditionFailed",
+	RequestEntityTooLarge:   "RequestEntityTooLarge",
+	UnsupportedMediaType:    "UnsupportedMediaType",
+	InternalServerError:     "InternalServerError",
+	NotImplemented:          "NotImplemented",
+	BadGateway:              "BadGateway",
+	ServiceUnavailable:      "ServiceUnavailable",
+	GatewayTimeout:          "GatewayTimeout",
+	ProxyingNotSupported:    "ProxyingNotSupported",
+	Continue:                "Continue",
+	RequestEntityIncomplete: "Request Entity Incomplete",
 }
 
 func init() {
@@ -173,6 +181,12 @@ const (
 	Size1         OptionID = 60
 )
 
+// Block-Wise Transfer Option IDs (RFC7959 section 6.).
+const (
+	Block2 OptionID = 23
+	Block1 OptionID = 27
+)
+
 // Option value format (RFC7252 section 3.2)
 type valueFormat uint8
 
@@ -207,6 +221,8 @@ var optionDefs = [256]optionDef{
 	ProxyURI:      optionDef{valueFormat: valueString, minLen: 1, maxLen: 1034},
 	ProxyScheme:   optionDef{valueFormat: valueString, minLen: 1, maxLen: 255},
 	Size1:         optionDef{valueFormat: valueUint, minLen: 0, maxLen: 4},
+	Block2:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 3},
+	Block1:        optionDef{valueFormat: valueUint, minLen: 0, maxLen: 3},
 }
 
 // MediaType specifies the content type of a message.
@@ -348,6 +364,60 @@ type Message struct {
 // IsConfirmable returns true if this message is confirmable.
 func (m Message) IsConfirmable() bool {
 	return m.Type == Confirmable
+}
+
+// IsBlock2 returns true if this message contains Block2 option.
+func (m Message) IsBlock2() bool {
+	_, ok := m.Option(Block2).(uint32)
+	return ok
+}
+
+// Block2 returns a block number, the block size and true when other blocks follow.
+func (m Message) Block2() (uint32, uint32, bool) {
+	return m.decodeBlock(Block2)
+}
+
+// SetBlock2 sets Block2 option.
+func (m *Message) SetBlock2(num, szx uint32, more bool) {
+	m.encodeBlock(Block2, num, szx, more)
+}
+
+// IsBlock2 returns true if this message contains Block2 option.
+func (m Message) IsBlock1() bool {
+	_, ok := m.Option(Block1).(uint32)
+	return ok
+}
+
+// Block1 returns a block number, the block size and true when other blocks follow.
+func (m Message) Block1() (uint32, uint32, bool) {
+	return m.decodeBlock(Block1)
+}
+
+// SetBlock1 sets Block1 option.
+func (m *Message) SetBlock1(num, szx uint32, more bool) {
+	m.encodeBlock(Block1, num, szx, more)
+}
+
+func (m *Message) encodeBlock(blockType OptionID, num, szx uint32, more bool) {
+	val := (num * 16) | (szx - 4)
+	if more {
+		val |= 8
+	}
+	m.SetOption(blockType, val)
+}
+
+func (m Message) decodeBlock(blockType OptionID) (uint32, uint32, bool) {
+	val, ok := m.Option(blockType).(uint32)
+	if !ok {
+		return 0, 0, false
+	}
+	num := val / 16
+	szx := (val & 7) + 4
+	more := false
+	if val&8 > 0 {
+		more = true
+	}
+	return num, szx, more
 }
 
 // Options gets all the values for the given option.
