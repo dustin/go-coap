@@ -981,3 +981,22 @@ func TestEncodeMessageWithBlockOptions(t *testing.T) {
 		t.Fatalf("Error block2 more %v != %v", block2More, resBlock2More)
 	}
 }
+
+func TestBlockEncoding(t *testing.T) {
+	req := Message{
+		Type:      Confirmable,
+		Code:      GET,
+		MessageID: 12345,
+	}
+	// Range of valid szx is <4;10>
+	for szx := uint32(4); szx <= 10; szx++ {
+		req.SetBlock1(0, szx, false)
+		if !req.IsBlock1() {
+			t.Fatalf("Error Block1 not set!")
+		}
+		req.SetBlock2(0, szx, false)
+		if !req.IsBlock2() {
+			t.Fatalf("Error Block2 not set!")
+		}
+	}
+}
