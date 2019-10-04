@@ -404,6 +404,26 @@ func (m *Message) SetPath(s []string) {
 	m.SetOption(URIPath, s)
 }
 
+// Query gets the Query set on this message if any.
+func (m Message) Query() []string {
+	return m.optionStrings(URIQuery)
+}
+
+// QueryString gets a path as an ampersand separated string.
+func (m Message) QueryString() string {
+	return strings.Join(m.Query(), "&")
+}
+
+// SetQueryString sets a query by an ampersand separated string.
+func (m *Message) SetQueryString(s string) {
+	m.SetQuery(strings.Split(s, "&"))
+}
+
+// SetQuery updates or adds a URIQuery attribute on this message.
+func (m *Message) SetQuery(s []string) {
+	m.SetOption(URIQuery, s)
+}
+
 // RemoveOption removes all references to an option
 func (m *Message) RemoveOption(opID OptionID) {
 	m.opts = m.opts.Minus(opID)
